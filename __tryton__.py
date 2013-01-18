@@ -3,7 +3,7 @@
 
 {
     'name': 'Nereid',
-    'version': '2.4.0.7dev',
+    'version': '2.4.0.7',
     'author': 'Openlabs Technologies & Consulting (P) Limited',
     'email': 'info@openlabs.co.in',
     'website': 'http://www.openlabs.co.in/',
