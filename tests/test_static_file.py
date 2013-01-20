@@ -93,7 +93,7 @@ class TestStaticFile(NereidTestCase):
         templates = {
             'localhost/home.jinja':
                 '''
-                {% set static_file = static_file_obj.browse(static_file_id) %}
+                {% set static_file = static_file_obj(static_file_id) %}
                 {{ static_file.url }}
                 ''',
 
@@ -124,8 +124,7 @@ class TestStaticFile(NereidTestCase):
             self.setup_defaults()
 
             file_buffer = buffer('test-content')
-            file_id = self.create_static_file(file_buffer)
-            static_file = self.static_file_obj.browse(file_id)
+            static_file = self.create_static_file(file_buffer)
             self.assertEqual(static_file.file_binary, file_buffer)
 
             app = self.get_app()
@@ -141,8 +140,7 @@ class TestStaticFile(NereidTestCase):
             self.setup_defaults()
 
             file_buffer = buffer('test-content')
-            file_id = self.create_static_file(file_buffer)
-            file = self.static_file_obj.browse(file_id)
+            file = self.create_static_file(file_buffer)
             self.assertFalse(file.url)
 
             app = self.get_app()
@@ -155,7 +153,7 @@ class TestStaticFile(NereidTestCase):
                         static_file_obj=static_file_obj,
                         static_file_id=file_id,
                     )
-                home_func = functools.partial(home_func, file_id=file_id)
+                home_func = functools.partial(home_func, file_id=file.id)
                 c.application.view_functions[
                     'nereid.website.home'] = new.instancemethod(
                         home_func, self.nereid_website_obj
@@ -178,13 +176,12 @@ class TestStaticFile(NereidTestCase):
                 'folder_name': 'test',
                 'description': 'Test Folder'
             })
-            file_id = self.static_file_obj.create({
+            file = self.static_file_obj.create({
                 'name': 'remote.png',
                 'folder': folder_id,
                 'type': 'remote',
                 'remote_path': 'http://openlabs.co.in/logo.png',
             })
-            file = self.static_file_obj.browse(file_id)
             self.assertFalse(file.url)
 
             app = self.get_app()
@@ -197,7 +194,7 @@ class TestStaticFile(NereidTestCase):
                         static_file_obj=static_file_obj,
                         static_file_id=file_id,
                     )
-                home_func = functools.partial(home_func, file_id=file_id)
+                home_func = functools.partial(home_func, file_id=file.id)
                 c.application.view_functions[
                     'nereid.website.home'] = new.instancemethod(
                         home_func, self.nereid_website_obj

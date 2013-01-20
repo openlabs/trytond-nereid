@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-
-    Test the configuration features for nereid
-
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details.
-"""
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 import json
 import unittest
 
@@ -149,7 +143,7 @@ class TestAddress(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
-            registered_user = self.nereid_user_obj.browse(
+            registered_user = self.nereid_user_obj(
                 self.registered_user_id
             )
             address_data = {
@@ -158,9 +152,10 @@ class TestAddress(NereidTestCase):
                 'streetbis': 'StreetBis',
                 'zip': 'zip',
                 'city': 'City',
-                'country': self.available_countries[0],
-                'subdivision': self.country_obj.browse(
-                        self.available_countries[0]).subdivisions[0].id,
+                'country': self.available_countries[0].id,
+                'subdivision': self.country_obj(
+                            self.available_countries[0]
+                        ).subdivisions[0].id,
             }
 
             with app.test_client() as c:
@@ -183,7 +178,7 @@ class TestAddress(NereidTestCase):
                 self.assertEqual(response.status_code, 302)
 
                 # Re browse the record
-                registered_user = self.nereid_user_obj.browse(
+                registered_user = self.nereid_user_obj(
                     self.registered_user_id
                 )
                 # Check if the user has two addresses now
@@ -212,7 +207,7 @@ class TestAddress(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
-            registered_user = self.nereid_user_obj.browse(
+            registered_user = self.nereid_user_obj(
                 self.registered_user_id
             )
             address_data = {
@@ -221,8 +216,8 @@ class TestAddress(NereidTestCase):
                 'streetbis': 'StreetBis',
                 'zip': 'zip',
                 'city': 'City',
-                'country': self.available_countries[0],
-                'subdivision': self.country_obj.browse(
+                'country': self.available_countries[0].id,
+                'subdivision': self.country_obj(
                         self.available_countries[0]).subdivisions[0].id,
             }
 
@@ -252,7 +247,7 @@ class TestAddress(NereidTestCase):
                 # automatically with the party
                 self.assertEqual(len(registered_user.party.addresses), 1)
 
-                address = self.address_obj.browse(existing_address.id)
+                address = self.address_obj(existing_address.id)
                 self.assertEqual(address.name, address_data['name'])
                 self.assertEqual(address.street, address_data['street'])
                 self.assertEqual(address.streetbis, address_data['streetbis'])
@@ -294,6 +289,7 @@ class TestAddress(NereidTestCase):
             app = self.get_app()
             with app.test_client() as c:
                 response = c.get('/en_US/countries')
+                self.assertEqual(response.status_code, 200) # Login success
                 self.assertEqual(len(json.loads(response.data)['result']), 5)
 
     def test_0050_subdivision_list(self):

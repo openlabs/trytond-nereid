@@ -1,13 +1,5 @@
-# -*- coding: UTF-8 -*-
-"""
-    nereid.routing
-
-    Routing: Sites, URLs
-
-    :copyright: (c) 2010 by Sharoon Thomas
-    :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details
-"""
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 from ast import literal_eval
 
 import pytz
@@ -25,7 +17,10 @@ from trytond.pool import Pool
 
 from .i18n import _
 
-# pylint: disable-msg=E1101
+__all__ = ['URLMap', 'WebSite', 'URLRule', 'URLRuleDefaults',
+           'WebsiteCountry', 'WebsiteCurrency']
+
+
 class URLMap(ModelSQL, ModelView):
     """
     URL Map
@@ -49,8 +44,7 @@ class URLMap(ModelSQL, ModelView):
     :param unique_urls: Enable `redirect_defaults` in the URL Map and
                         redirects the defaults to the URL 
     """
-    _name = "nereid.url_map"
-    _description = "Nereid URL Map"
+    __name__ = "nereid.url_map"
 
     name = fields.Char(
         'Name', required=True, select=True,
@@ -68,30 +62,26 @@ class URLMap(ModelSQL, ModelView):
     unique_urls = fields.Boolean('Unique URLs')
     active = fields.Boolean('Active')
 
-    def default_active(self):
+    @staticmethod
+    def default_active():
         "By default URL is active"
         return True
 
-    def default_charset(self):
+    @staticmethod
+    def default_charset():
         "By default characterset is utf-8"
         return 'utf-8'
 
-    def get_rules_arguments(self, map_id):
+    def get_rules_arguments(self):
         """
         Constructs a list of dictionary of arguments needed
         for URL Rule construction. A wrapper around the 
             URL RULE get_rule_arguments
         """
         rule_args = [ ]
-        rule_obj = Pool().get('nereid.url_rule')
-        url_map = self.browse(map_id)
-        for rule in url_map.rules:
-            rule_args.append(
-                rule_obj.get_rule_arguments(rule.id)
-            )
+        for rule in self.rules:
+            rule_args.append(rule.get_rule_arguments())
         return rule_args
-
-URLMap()
 
 
 class LoginForm(Form):
@@ -114,8 +104,7 @@ class WebSite(ModelSQL, ModelView):
     :param active: Whether the website is active or not.
 
     """
-    _name = "nereid.website"
-    _description = "Nereid WebSite"
+    __name__ = "nereid.website"
 
     #: The name field is used for both information and also as
     #: the site identifier for nereid. The WSGI application requires
@@ -162,20 +151,24 @@ class WebSite(ModelSQL, ModelView):
         [(x, x) for x in pytz.common_timezones], 'Timezone', translate=False
     )
 
-    def default_timezone(self):
+    @staticmethod
+    def default_timezone():
         return 'UTC'
 
-    def default_active(self):
+    @staticmethod
+    def default_active():
         return True
 
-    def __init__(self):
-        super(WebSite, self).__init__()
-        self._sql_constraints = [
+    @classmethod
+    def __setup__(cls):
+        super(WebSite, cls).__setup__()
+        cls._sql_constraints = [
             ('name_uniq', 'UNIQUE(name)',
              'Another site with the same name already exists!')
         ]
 
-    def country_list(self):
+    @classmethod
+    def country_list(cls):
         """
         Return the list of countries in JSON
         """
@@ -184,7 +177,8 @@ class WebSite(ModelSQL, ModelView):
                 for c in request.nereid_website.countries
             ])
 
-    def subdivision_list(self):
+    @staticmethod
+    def subdivision_list():
         """
         Return the list of states for given country
         """
@@ -192,9 +186,8 @@ class WebSite(ModelSQL, ModelView):
         if country not in [c.id for c in request.nereid_website.countries]:
             abort(404)
 
-        subdivision_obj = Pool().get('country.subdivision')
-        ids = subdivision_obj.search([('country', '=', country)])
-        subdivisions = subdivision_obj.browse(ids)
+        Subdivision = Pool().get('country.subdivision')
+        subdivisions = Subdivision.search([('country', '=', country)])
         return jsonify(
             result = [{
                 'id': s.id,
@@ -208,13 +201,12 @@ class WebSite(ModelSQL, ModelView):
         """
         Return complete list of URLs
         """
-        url_map_obj = Pool().get('nereid.url_map')
-        website_id = self.search([('name', '=', name)])
-        if not website_id:
+        URLMap = Pool().get('nereid.url_map')
+        websites = self.search([('name', '=', name)])
+        if not websites:
             raise RuntimeError("Website with Name %s not found" % name)
 
-        website = self.browse(website_id[0])
-        return url_map_obj.get_rules_arguments(website.url_map.id)
+        return URLMap.get_rules_arguments(websites[0].url_map.id)
 
     def stats(self, **arguments):
         """
@@ -223,11 +215,13 @@ class WebSite(ModelSQL, ModelView):
         return u'Request: %s\nArguments: %s\nEnviron: %s\n' \
             % (request, arguments, request.environ)
 
-    def home(self):
+    @classmethod
+    def home(cls):
         "A dummy home method which just renders home.jinja"
         return render_template('home.jinja')
 
-    def login(self):
+    @classmethod
+    def login(cls):
         """
         Simple login based on the email and password
 
@@ -239,8 +233,8 @@ class WebSite(ModelSQL, ModelView):
             return redirect(request.args['next'])
 
         if request.method == 'POST' and login_form.validate():
-            user_obj = Pool().get('nereid.user')
-            result = user_obj.authenticate(
+            NereidUser = Pool().get('nereid.user')
+            result = NereidUser.authenticate(
                 login_form.email.data, login_form.password.data
             )
             # Result can be the following:
@@ -253,7 +247,7 @@ class WebSite(ModelSQL, ModelView):
                 flash(_("You are now logged in. Welcome %(name)s",
                     name=result.name))
                 session['user'] = result.id
-                login.send(self)
+                login.send()
                 if request.is_xhr:
                     return 'OK'
                 else:
@@ -265,28 +259,29 @@ class WebSite(ModelSQL, ModelView):
             elif result is None:
                 flash(_("Invalid login credentials"))
 
-            failed_login.send(self, form=login_form)
+            failed_login.send(form=login_form)
 
             if request.is_xhr:
                 return 'NOK'
 
         return render_template('login.jinja', login_form=login_form)
 
-    def logout(self):
+    @classmethod
+    def logout(cls):
         "Log the user out"
         session.pop('user', None)
-        logout.send(self)
+        logout.send()
         flash(
             _('You have been logged out successfully. Thanks for visiting us')
         )
         return redirect(
-            request.args.get('next', 
-            url_for('nereid.website.home'))
+            request.args.get('next', url_for('nereid.website.home'))
         )
 
-    def account_context(self):
+    @staticmethod
+    def account_context():
         """This fills the account context for the template
-        rendering my account. Additional modules might want to fill extra 
+        rendering my account. Additional modules might want to fill extra
         data into the context
         """
         return dict(
@@ -294,15 +289,15 @@ class WebSite(ModelSQL, ModelView):
             party = request.nereid_user.party,
         )
 
+    @classmethod
     @login_required
-    def account(self):
-        context = self.account_context()
-        return render_template('account.jinja', **context)
+    def account(cls):
+        return render_template('account.jinja', **cls.account_context())
 
     def get_currencies(self):
         """Returns available currencies for current site
 
-        .. note:: 
+        .. note::
             A special method is required so that the fetch can be speeded up, 
             by pushing the categories to the central cache which cannot be 
             done directly on a browse node.
@@ -319,36 +314,37 @@ class WebSite(ModelSQL, ModelView):
                 'id': c.id,
                 'name': c.name,
                 'symbol': c.symbol,
-                } for c in request.nereid_website.currencies]
+                } for c in self.currencies]
             cache.set(cache_key, rv, 60*60)
         return rv
 
-    def _user_status(self):
+    @staticmethod
+    def _user_status():
         """Returns the commonly required status parameters of the user
 
         This method could be inherited and components could be added
         """
         rv = {
             'messages': get_flashed_messages()
-            }
+        }
         if request.is_guest_user:
             rv.update({
                 'logged_id': False
-                })
+            })
         else:
             rv.update({
                 'logged_in': True,
                 'name': request.nereid_user.display_name
-                })
+            })
         return rv
 
-    def user_status(self):
+    @classmethod
+    def user_status(cls):
         """
         Returns a JSON of the user_status
         """
-        return jsonify(status=self._user_status())
+        return jsonify(status=cls._user_status())
 
-WebSite()
 
 
 class URLRule(ModelSQL, ModelView):
@@ -394,8 +390,7 @@ class URLRule(ModelSQL, ModelView):
     :param sequence: Numeric sequence of the URL Map.
     :param url_map: Relation field for url_rule o2m
     """
-    _name = "nereid.url_rule"
-    _description = "Nereid URL Rule"
+    __name__ = "nereid.url_rule"
     _rec_name = 'rule'
 
     rule = fields.Char('Rule', required=True, select=True,)
@@ -434,17 +429,19 @@ class URLRule(ModelSQL, ModelView):
     sequence = fields.Integer('Sequence', required=True,)
     url_map = fields.Many2One('nereid.url_map', 'URL Map')
 
-    def __init__(self):
-        super(URLRule, self).__init__()
-        self._order.insert(0, ('sequence', 'ASC'))
+    @classmethod
+    def __setup__(cls):
+        super(URLRule, cls).__setup__()
+        cls._order.insert(0, ('sequence', 'ASC'))
 
-    def init(self, module_name):
+    @classmethod
+    def __register__(cls, module_name):
         """Migrations
 
         :param module_name: Module Name (Automatically passed by caller)
         """
         cursor = Transaction().cursor
-        table = TableHandler(cursor, self, module_name)
+        table = TableHandler(cursor, cls, module_name)
 
         # Drop the required index on methods
         table.not_null_action('methods', action="remove")
@@ -455,23 +452,25 @@ class URLRule(ModelSQL, ModelView):
         # Check if the new boolean fields exist
         http_method_fields_exists = table.column_exist('http_method_get')
 
-        super(URLRule, self).init(module_name)
+        super(URLRule, cls).__register__(module_name)
 
         if not http_method_fields_exists:
             # if the http method fields did not exist before this method
             # should transition old_methods to the boolean fields
-            rule_ids = self.search([])
-            for rule in self.browse(rule_ids):
-                self.set_methods([rule.id], 'methods', rule.old_methods)
+            rules = cls.search([])
+            for rule in rules:
+                cls.set_methods([rule.id], 'methods', rule.old_methods)
 
 
-    def default_active(self):
+    @staticmethod
+    def default_active():
         return True
 
-    def default_methods(self):
-        return '("GET",)'
+    @staticmethod
+    def default_http_method_get():
+        return True
 
-    def get_methods(self, ids, name):
+    def get_methods(self, name):
         """
         The methods field will be deprecated in 2.6.0.1. Till then display the
         field value based on the boolean fields which replaces the selection
@@ -480,20 +479,17 @@ class URLRule(ModelSQL, ModelView):
         Note that this only handles GET and POST methods as they were the only
         ones handled before v2.4.0.6.
 
-        :param ids: List of ids
         :param name: Name of the function field
         """
-        res = {}
-        for rule in self.browse(ids):
-            if rule.http_method_get and rule.http_method_post:
-                res[rule.id] = '("GET", "POST")'
-            elif rule.http_method_post and not rule.http_method_get:
-                res[rule.id] = '("POST",)'
-            else:
-                res[rule.id] = '("GET",)'
-        return res
+        if self.http_method_get and self.http_method_post:
+            return'("GET", "POST")'
+        elif self.http_method_post and not self.http_method_get:
+            return '("POST",)'
+        else:
+            return '("GET",)'
 
-    def set_methods(self, ids, name, value):
+    @classmethod
+    def set_methods(cls, urls, name, value):
         """
         Set the values of http_* boolean fields based on the value of methods
 
@@ -507,48 +503,43 @@ class URLRule(ModelSQL, ModelView):
         if 'POST' in methods:
             write_vals['http_method_post'] = True
         if write_vals:
-            self.write(ids, write_vals)
+            cls.write(urls, write_vals)
         return
 
-    def get_http_methods(self, rule):
+    def get_http_methods(self):
         """
         Returns an iterable of HTTP methods that the URL has to support.
 
         .. versionadded: 2.4.0.6
-
-        :param rule: Browse record of the rule
         """
         methods = []
-        if rule.http_method_get:
+        if self.http_method_get:
             methods.append('GET')
-        if rule.http_method_post:
+        if self.http_method_post:
             methods.append('POST')
-        if rule.http_method_put:
+        if self.http_method_put:
             methods.append('PUT')
-        if rule.http_method_delete:
+        if self.http_method_delete:
             methods.append('DELETE')
-        if rule.http_method_patch:
+        if self.http_method_patch:
             methods.append('PATCH')
         return methods
 
-    def get_rule_arguments(self, rule_id):
+    def get_rule_arguments(self):
         """
         Return the arguments of a Rule in the corresponding format
         """
-        rule = self.browse(rule_id)
         defaults = dict(
-            [(i.key, i.value) for i in rule.defaults]
+            [(i.key, i.value) for i in self.defaults]
         )
         return {
-                'rule': rule.rule,
-                'endpoint': rule.endpoint,
-                'methods': self.get_http_methods(rule),
-                'build_only': rule.only_for_genaration,
+                'rule': self.rule,
+                'endpoint': self.endpoint,
+                'methods': self.get_http_methods(),
+                'build_only': self.only_for_genaration,
                 'defaults': defaults,
-                'redirect_to': rule.redirect_to or None,
+                'redirect_to': self.redirect_to or None,
             }
-
-URLRule()
 
 
 class URLRuleDefaults(ModelSQL, ModelView):
@@ -559,8 +550,7 @@ class URLRuleDefaults(ModelSQL, ModelView):
     :param value: The Value for the default's Value
     :param Rule: M2O Rule
     """
-    _name = "nereid.url_rule_defaults"
-    _description = "Nereid URL Rule Defaults"
+    __name__ = "nereid.url_rule_defaults"
     _rec_name = 'key'
 
     key = fields.Char('Key', required=True, select=True)
@@ -568,31 +558,23 @@ class URLRuleDefaults(ModelSQL, ModelView):
     rule = fields.Many2One('nereid.url_rule', 'Rule', required=True, 
         select=True)
 
-URLRuleDefaults()
-
 
 class WebsiteCountry(ModelSQL):
     "Website Country Relations"
-    _name = 'nereid.website-country.country'
-    _description = __doc__
+    __name__ = 'nereid.website-country.country'
 
     website = fields.Many2One('nereid.website', 'Website')
     country = fields.Many2One('country.country', 'Country')
 
-WebsiteCountry()
-
 
 class WebsiteCurrency(ModelSQL):
     "Currencies to be made available on website"
-    _name = 'nereid.website-currency.currency'
+    __name__ = 'nereid.website-currency.currency'
     _table = 'website_currency_rel'
-    _description = __doc__
 
     website = fields.Many2One(
-        'nereid.website', 'Website', 
+        'nereid.website', 'Website',
         ondelete='CASCADE', select=1, required=True)
     currency = fields.Many2One(
-        'currency.currency', 'Currency', 
+        'currency.currency', 'Currency',
         ondelete='CASCADE', select=1, required=True)
-
-WebsiteCurrency()

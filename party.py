@@ -1,17 +1,14 @@
-# -*- coding: UTF-8 -*-
-'''
-    nereid_trytond.party
-
-    Partner Address is also considered as the login user
-
-    :copyright: (c) 2010 by Sharoon Thomas.
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details
-'''
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 import random
 import string
-import hashlib
 import urllib
+
+try:
+    import hashlib
+except ImportError:
+    hashlib = None
+    import sha
 
 import pytz
 from wtforms import Form, TextField, IntegerField, SelectField, validators, \
@@ -31,6 +28,9 @@ from trytond.config import CONFIG
 from trytond.tools import get_smtp_server
 
 from .i18n import _, get_translations
+
+__all__ = ['Address', 'Party', 'NereidUser',
+           'ContactMechanism', 'Permission', 'UserPermission']
 
 
 class RegistrationForm(Form):
@@ -112,80 +112,18 @@ STATES = {
 }
 
 
-# pylint: disable-msg=E1101
-class AdditionalDetails(ModelSQL, ModelView):
-    "Additional Details for Address"
-    _name = "address.additional_details"
-    _description = __doc__
-    _rec_name = 'value'
-
-    def get_types(self):
-        """
-        Wrapper to convert _get_types dictionary
-        into a `list of tuple` for the use of Type Selection field
-
-        This hook will scan all methods which start with _type_address_extend
-
-        Your hook extension should look like:
-
-        def _type_address_extend_<name>(self, cursor, user, context=None):
-            return {
-                        '<name>': '<value>'
-            }
-
-        An example from ups:
-
-        return {'type': 'value'
-            }
-
-        :return: the list of tuple for Selection field
-        """
-        type_dict = {}
-        for attribute in dir(self):
-            if attribute.startswith('_type_address_extend'):
-                type_dict.update(getattr(self, attribute).__call__())
-        return type_dict.items()
-
-    type = fields.Selection(
-        'get_types', 'Type', required=True, states=STATES, select=1
-    )
-    value = fields.Char('Value', select=1, states=STATES)
-    comment = fields.Text('Comment', states=STATES)
-    address = fields.Many2One('party.address', 'Address', required=True,
-        ondelete='CASCADE', states=STATES, select=1)
-    active = fields.Boolean('Active', select=1)
-    sequence = fields.Integer('Sequence')
-
-    def default_active(self):
-        return True
-
-    def _type_address_extend_default(self):
-        return {
-            'dob': 'Date of Birth',
-            'other': 'Other',
-        }
-
-AdditionalDetails()
-
-
 class Address(ModelSQL, ModelView):
     """Party Address"""
-    _name = 'party.address'
+    __name__ = 'party.address'
 
     registration_form = RegistrationForm
 
-    #: Extra fields to cater to extended registration
-    #: This field is retained only for legacy purposes.
-    #: Additional details is now directly stored on the user object
-    additional_details = fields.One2Many(
-        'address.additional_details',
-        'address', 'Additional Details', states=STATES
-    )
     email = fields.Char('Email')
     phone = fields.Char('Phone')
 
+    @classmethod
     @login_required
-    def edit_address(self, address=None):
+    def edit_address(cls, address=None):
         """
         Create/Edit an Address
 
@@ -204,7 +142,7 @@ class Address(ModelSQL, ModelView):
             address = None
         if request.method == 'POST' and form.validate():
             if address is not None:
-                self.write(address, {
+                cls.write([cls(address)], {
                     'name': form.name.data,
                     'street': form.street.data,
                     'streetbis': form.streetbis.data,
@@ -216,7 +154,7 @@ class Address(ModelSQL, ModelView):
                     'phone': form.phone.data,
                     })
             else:
-                self.create({
+                cls.create({
                     'name': form.name.data,
                     'street': form.street.data,
                     'streetbis': form.streetbis.data,
@@ -231,7 +169,7 @@ class Address(ModelSQL, ModelView):
             return redirect(url_for('party.address.view_address'))
         elif request.method == 'GET' and address:
             # Its an edit of existing address, prefill data
-            record = self.browse(address)
+            record = cls(address)
             form = AddressForm(
                 name=record.name,
                 street=record.street,
@@ -246,55 +184,33 @@ class Address(ModelSQL, ModelView):
             form.country.choices = countries
         return render_template('address-edit.jinja', form=form, address=address)
 
+    @classmethod
     @login_required
-    def view_address(self):
+    def view_address(cls):
         "View the addresses of user"
         return render_template('address.jinja')
 
-Address()
 
 
 class Party(ModelSQL, ModelView):
     "Party"
-    _name = 'party.party'
+    __name__ = 'party.party'
 
     nereid_users = fields.One2Many('nereid.user', 'party', 'Nereid Users')
-
-Party()
 
 
 class NereidUser(ModelSQL, ModelView):
     """
     Nereid Users
     """
-    _name = "nereid.user"
-    _description = __doc__
+    __name__ = "nereid.user"
     _inherits = {"party.party": 'party'}
+    _rec_name = 'display_name'
 
     party = fields.Many2One('party.party', 'Party', required=True,
             ondelete='CASCADE', select=1)
 
-    #: It is recommended to use this field to display the name of the user, as
-    #: the behaviour of how the name of the user will be displayed depends on 
-    #: the context (b2b or b2c)
-    #:
-    #: In a b2c context, the nereid_user is the same as party, so the name
-    #: field from nereid_user (inherited from party) will do the job of being
-    #: both the name of the user and of the party (in the context of Tryton)
-    #:
-    #: In a b2b context the party becomes the entity with which Tryton does
-    #: business with and that party could have multiple users. Though the
-    #: data model allows this, the name of the user will be confusing without
-    #: a display name as the default name of the user in the case will be that
-    #: of the company.
-    #:
-    #: The default implementation of display_name uses it for a b2c context
-    #: and is a proxy for the name of the party
-    display_name = fields.Function(
-        fields.Char('Display Name'),
-        'get_display_name', setter='set_display_name',
-        searcher='search_display_name'
-    )
+    display_name = fields.Char('Display Name', required=True)
 
     #: The email of the user is also the login name/username of the user
     email = fields.Char("e-Mail", select=1)
@@ -327,17 +243,15 @@ class NereidUser(ModelSQL, ModelView):
     permissions = fields.Many2Many('nereid.permission-nereid.user',
         'nereid_user', 'permission', 'Permissions')
 
-    def get_permissions(self, user):
+    def get_permissions(self):
         """
         Returns all the permissions as a list of names
-
-        :param user: Browse Record of the user
         """
         # TODO: Cache this value for each user to avoid hitting the database
         # everytime.
-        return frozenset([p.value for p in user.permissions])
+        return frozenset([p.value for p in self.permissions])
 
-    def has_permissions(self, nereid_user, permissions):
+    def has_permissions(self, permissions):
         """Check if the user has required permissions for access
 
         :param permissions: A set/frozenset of permission values/keywords
@@ -346,25 +260,28 @@ class NereidUser(ModelSQL, ModelView):
         """
         if not isinstance(permissions, (set, frozenset)):
             permissions = frozenset(permissions)
-        current_user_permissions = self.get_permissions(nereid_user)
+        current_user_permissions = self.get_permissions()
         if permissions.issubset(current_user_permissions):
             return True
         return False
 
-    def default_timezone(self):
+    @staticmethod
+    def default_timezone():
         return "UTC"
 
-    def default_company(self):
+    @staticmethod
+    def default_company():
         return Transaction().context.get('company') or False
 
-    def __init__(self):
-        super(NereidUser, self).__init__()
-        self._sql_constraints += [
+    @classmethod
+    def __setup__(cls):
+        super(NereidUser, cls).__setup__()
+        cls._sql_constraints += [
             ('unique_email_company', 'UNIQUE(email, company)',
                 'Email must be unique in a company'),
             ]
 
-    def _activate(self, user_id, activation_code):
+    def _activate(self, activation_code):
         """
         Activate the User account
 
@@ -372,38 +289,15 @@ class NereidUser(ModelSQL, ModelView):
             This method will raise an assertion error if the activation_code is
             not valid.
 
-        :param user_id: ID of the user
         :param activation_code: The activation code used
         :return: True if the activation code was correct
         """
-        user = self.browse(user_id)
-        assert user.activation_code == activation_code, \
+        assert self.activation_code == activation_code, \
                     'Invalid Activation Code'
-        return self.write(user.id, {'activation_code': None})
+        return self.write([self], {'activation_code': None})
 
-    def get_display_name(self, ids, name):
-        """
-        Returns the name of the party as the name of the user
-
-        :param ids: List of ids
-        :param name: Name of the field
-        """
-        res = {}
-        for user in self.browse(ids):
-            res[user.id] = user.party.name
-        return res
-
-    def set_display_name(self, ids, name, value):
-        """
-        Do nothing for now as the name field and the display name are the same
-
-        :param ids: List of ids
-        :param name: Name of the field
-        :param value: The value of the field
-        """
-        return True
-
-    def search_display_name(self, name, clause):
+    @classmethod
+    def search_display_name(cls, name, clause):
         """
         Alter the display_name search pattern to search in the name field
 
@@ -412,7 +306,8 @@ class NereidUser(ModelSQL, ModelView):
         """
         return [('name') + clause[1:]]
 
-    def get_registration_form(self):
+    @staticmethod
+    def get_registration_form():
         """
         Returns a registration form for use in the site
 
@@ -433,14 +328,15 @@ class NereidUser(ModelSQL, ModelView):
 
         return registration_form
 
-    def registration(self):
+    @classmethod
+    def registration(cls):
         """
         Invokes registration of an user
         """
-        registration_form = self.get_registration_form()
+        registration_form = cls.get_registration_form()
 
         if request.method == 'POST' and registration_form.validate():
-            existing = self.search([
+            existing = cls.search([
                 ('email', '=', request.form['email']),
                 ('company', '=', request.nereid_website.company.id),
                 ])
@@ -449,17 +345,16 @@ class NereidUser(ModelSQL, ModelView):
                     'Please contact customer care')
                 )
             else:
-                user_id = self.create({
+                nereid_user = cls.create({
                     'name': registration_form.name.data,
                     'display_name': registration_form.name.data,
                     'email': registration_form.email.data,
                     'password': registration_form.password.data,
                     'company': request.nereid_website.company.id,
                     })
-                self.create_act_code(user_id)
-                registration.send(user_id)
-                user = self.browse(user_id)
-                self.send_activation_email(user)
+                nereid_user.create_act_code()
+                registration.send(nereid_user)
+                nereid_user.send_activation_email()
                 flash(
                     _('Registration Complete. Check your email for activation')
                 )
@@ -469,26 +364,27 @@ class NereidUser(ModelSQL, ModelView):
 
         return render_template('registration.jinja', form=registration_form)
 
-    def send_activation_email(self, nereid_user):
+    def send_activation_email(self):
         """
         Send an activation email to the user
 
         :param nereid_user: The browse record of the user
         """
         email_message = render_email(
-            CONFIG['smtp_from'], nereid_user.email, _('Account Activation'),
+            CONFIG['smtp_from'], self.email, _('Account Activation'),
             text_template = 'emails/activation-text.jinja',
             html_template = 'emails/activation-html.jinja',
-            nereid_user = nereid_user
+            nereid_user = self
         )
         server = get_smtp_server()
         server.sendmail(
-            CONFIG['smtp_from'], [nereid_user.email], email_message.as_string()
+            CONFIG['smtp_from'], [self.email], email_message.as_string()
         )
         server.quit()
 
+    @classmethod
     @login_required
-    def change_password(self):
+    def change_password(cls):
         """
         Changes the password
 
@@ -499,18 +395,9 @@ class NereidUser(ModelSQL, ModelView):
         form = ChangePasswordForm(request.form)
 
         if request.method == 'POST' and form.validate():
-            user = request.nereid_user
-
-            # Confirm the current password
-            password = form.old_password.data
-            password += user.salt or ''
-            if isinstance(password, unicode):
-                password = password.encode('utf-8')
-            password_sha = hashlib.sha1(password).hexdigest()
-
-            if password_sha == user.password:
-                self.write(
-                    request.nereid_user.id,
+            if request.nereid_user.match_password(form.old_password.data):
+                cls.write(
+                    [request.nereid_user],
                     {'password': form.password.data}
                 )
                 flash(
@@ -526,8 +413,9 @@ class NereidUser(ModelSQL, ModelView):
             'change-password.jinja', change_password_form=form
         )
 
+    @classmethod
     @login_required
-    def new_password(self):
+    def new_password(cls):
         """Create a new password
 
         .. tip::
@@ -549,8 +437,8 @@ class NereidUser(ModelSQL, ModelView):
                 current_app.logger.debug('New password not allowed in session')
                 abort(403)
 
-            self.write(
-                request.nereid_user.id,
+            cls.write(
+                [request.nereid_user],
                 {'password': form.password.data}
             )
             session.pop('allow_new_password')
@@ -562,19 +450,19 @@ class NereidUser(ModelSQL, ModelView):
 
         return render_template('new-password.jinja', password_form=form)
 
-    def activate(self, user_id, activation_code):
+    def activate(self, activation_code):
         """A web request handler for activation
 
         :param activation_code: A 12 character activation code indicates reset
             while 16 character activation code indicates a new registration
         """
         try:
-            self._activate(user_id, activation_code)
+            self._activate(activation_code)
         except AssertionError:
             flash(_('Invalid Activation Code'))
         else:
             # Log the user in since the activation code is correct
-            session['user'] = user_id
+            session['user'] = self.id
 
             # Redirect the user to the correct location according to the type
             # of activation code.
@@ -587,7 +475,7 @@ class NereidUser(ModelSQL, ModelView):
 
         return redirect(url_for('nereid.website.login'))
 
-    def create_act_code(self, user_id, code_type="new"):
+    def create_act_code(self, code_type="new"):
         """Create activation code
 
         A 12 character activation code indicates reset while 16
@@ -603,9 +491,10 @@ class NereidUser(ModelSQL, ModelView):
         act_code = ''.join(
             random.sample(string.letters + string.digits, length)
         )
-        return self.write(user_id, {'activation_code': act_code})
+        return self.write([self], {'activation_code': act_code})
 
-    def reset_account(self):
+    @classmethod
+    def reset_account(cls):
         """
         Reset the password for the user.
 
@@ -615,7 +504,7 @@ class NereidUser(ModelSQL, ModelView):
             the link, he can change his password.
         """
         if request.method == 'POST':
-            user_ids = self.search([
+            user_ids = cls.search([
                 ('email', '=', request.form['email']),
                 ('company', '=', request.nereid_website.company.id),
                 ])
@@ -624,34 +513,52 @@ class NereidUser(ModelSQL, ModelView):
                 flash(_('Invalid email address'))
                 return render_template('reset-password.jinja')
 
-            self.create_act_code(user_ids[0], "reset")
-            user = self.browse(user_ids[0])
-            self.send_reset_email(user)
+            nereid_user, = user_ids
+
+            nereid_user.create_act_code("reset")
+            nereid_user.send_reset_email()
             flash(_('An email has been sent to your account for resetting'
                 ' your credentials'))
             return redirect(url_for('nereid.website.login'))
 
         return render_template('reset-password.jinja')
 
-    def send_reset_email(self, nereid_user):
+    def send_reset_email(self):
         """
         Send an account reset email to the user
 
         :param nereid_user: The browse record of the user
         """
         email_message = render_email(
-            CONFIG['smtp_from'], nereid_user.email, _('Account Password Reset'),
+            CONFIG['smtp_from'], self.email, _('Account Password Reset'),
             text_template = 'emails/reset-text.jinja',
             html_template = 'emails/reset-html.jinja',
-            nereid_user = nereid_user
+            nereid_user = self
         )
         server = get_smtp_server()
         server.sendmail(
-            CONFIG['smtp_from'], [nereid_user.email], email_message.as_string()
+            CONFIG['smtp_from'], [self.email], email_message.as_string()
         )
         server.quit()
 
-    def authenticate(self, email, password):
+    def match_password(self, password):
+        """
+        Checks if 'password' is the same as the current users password.
+
+        :param password: The password of the user (string or unicode)
+        :return: True or False
+        """
+        password += self.salt or ''
+        if isinstance(password, unicode):
+            password = password.encode('utf-8')
+        if hashlib:
+            digest = hashlib.sha1(password).hexdigest()
+        else:
+            digest = sha.new(password).hexdigest()
+        return (digest == self.password)
+
+    @classmethod
+    def authenticate(cls, email, password):
         """Assert credentials and if correct return the
         browse record of the user
 
@@ -663,42 +570,37 @@ class NereidUser(ModelSQL, ModelView):
             False: Account is inactive
         """
 
-        user_ids = self.search([
+        users = cls.search([
             ('email', '=', request.form['email']),
             ('company', '=', request.nereid_website.company.id),
-            ])
+        ])
 
-        if not user_ids:
+        if not users:
             current_app.logger.debug("No user with email %s" % email)
             return None
 
-        if len(user_ids) > 1:
+        if len(users) > 1:
             current_app.logger.debug('%s has too many accounts' % email)
             return None
 
-        user = self.browse(user_ids[0])
+        user, = users
         if user.activation_code and len(user.activation_code) == 16:
             # A new account with activation pending
             current_app.logger.debug('%s not activated' % email)
             flash(_("Your account has not been activated yet!"))
             return False # False so to avoid `invalid credentials` flash
 
-        password += user.salt or ''
-
-        if isinstance(password, unicode):
-            password = password.encode('utf-8')
-
-        password_sha = hashlib.sha1(password).hexdigest()
-        if password_sha == user.password:
+        if user.match_password(password):
             # Reset any reset activation code that might be there since its a 
             # successful login with the old password
             if user.activation_code:
-                self.write(user.id, {'activation_code': None})
+                cls.write([user], {'activation_code': None})
             return user
 
         return None
 
-    def _convert_values(self, values):
+    @staticmethod
+    def _convert_values(values):
         """
         A helper method which looks if the password is specified in the values.
         If it is, then the salt is also made and added
@@ -709,29 +611,36 @@ class NereidUser(ModelSQL, ModelView):
             values['salt'] = ''.join(random.sample(
                 string.ascii_letters + string.digits, 8))
             values['password'] += values['salt']
+
         return values
 
-    def create(self, values):
+    @classmethod
+    def create(cls, values):
         """
         Create, but add salt before saving
 
         :param values: Dictionary of Values
         """
-        return super(NereidUser, self).create(self._convert_values(values))
+        values = cls._convert_values(values.copy())
+        if 'display_name' not in values:
+            values['display_name'] = values['name']
+        return super(NereidUser, cls).create(values)
 
-    def write(self, ids, values):
+    @classmethod
+    def write(cls, nereid_users, values):
         """
         Update salt before saving
-
-        :param ids: IDs of the records
-        :param values: Dictionary of values
         """
-        return super(NereidUser, self).write(ids, self._convert_values(values))
+        return super(NereidUser, cls).write(
+            nereid_users, cls._convert_values(values)
+        )
 
-    def get_gravatar_url(self, user, **kwargs):
+    @staticmethod
+    def get_gravatar_url(email, **kwargs):
         """
         Return a gravatar url for the given email
 
+        :param email: e-mail of the user
         :param https: To get a secure URL
         :param default: The default image to return if there is no profile pic
                         For example a unisex avatar
@@ -741,7 +650,7 @@ class NereidUser(ModelSQL, ModelView):
             url = 'https://secure.gravatar.com/avatar/%s?'
         else:
             url = 'http://www.gravatar.com/avatar/%s?'
-        url = url % hashlib.md5(user.email.lower()).hexdigest()
+        url = url % hashlib.md5(email.lower()).hexdigest()
 
         params = []
         default = kwargs.get('default', None)
@@ -754,41 +663,47 @@ class NereidUser(ModelSQL, ModelView):
 
         return url + urllib.urlencode(params)
 
-    def get_profile_picture(self, user, **kwargs):
+    def get_profile_picture(self, **kwargs):
         """
         Return the url to the profile picture of the user.
 
         The default implementation fetches the profile image of the user from
         gravatar using :meth:`get_gravatar_url`
         """
-        return self.get_gravatar_url(user, **kwargs)
+        return self.get_gravatar_url(self.email, **kwargs)
 
-    def aslocaltime(self, naive_date, user=None):
+    @staticmethod
+    def aslocaltime(naive_date, local_tz_name=None):
         """
         Returns a localized time using `pytz.astimezone` method.
 
         :param naive_date: a naive datetime (datetime with no timezone
                            information), which is assumed to be the UTC time.
-        :param user: If a user is provided, the timezone of the user is taken
-                     to build the offset or the user from nereid context is
-                     used. The value if provided must be a browse record.
+        :param local_tz_name: The timezone in which the date has to be returned
+        :type local_tz_name: string
+
         :return: A datetime object with local time
         """
-        if user is None:
-            user = request.nereid_user
 
         utc_date = pytz.utc.localize(naive_date)
 
-        if not user.timezone:
+        if not local_tz_name:
             return utc_date
 
-        user_tz = pytz.timezone(user.timezone)
-        if user_tz == pytz.utc:
+        local_tz = pytz.timezone(local_tz_name)
+        if local_tz == pytz.utc:
             return utc_date
 
-        return utc_date.astimezone(user_tz)
+        return utc_date.astimezone(local_tz)
 
-NereidUser()
+    def as_user_local_time(self, naive_date):
+        """
+        Returns a date localized in the user's timezone.
+
+        :param naive_date: a naive datetime (datetime with no timezone
+                           information), which is assumed to be the UTC time.
+        """
+        return self.aslocaltime(naive_date, self.timezone)
 
 
 class ContactMechanismForm(Form):
@@ -801,7 +716,7 @@ class ContactMechanism(ModelSQL, ModelView):
     """
     Allow modification of contact mechanisms
     """
-    _name = "party.contact_mechanism"
+    __name__ = "party.contact_mechanism"
 
     def get_form(self):
         """
@@ -858,13 +773,11 @@ class ContactMechanism(ModelSQL, ModelView):
             })
         return redirect(request.referrer)
 
-ContactMechanism()
 
 
 class Permission(ModelSQL, ModelView):
     "Nereid Permissions"
-    _name = 'nereid.permission'
-    _description = __doc__
+    __name__ = 'nereid.permission'
 
     name = fields.Char('Name', required=True, select=True)
     value  = fields.Char('Value', required=True, select=True)
@@ -872,24 +785,21 @@ class Permission(ModelSQL, ModelView):
         'permission', 'nereid_user', 'Nereid Users'
     )
 
-    def __init__(self):
-        super(Permission, self).__init__()
-        self._sql_constraints += [
+    @classmethod
+    def __setup__(cls):
+        super(Permission, cls).__setup__()
+        cls._sql_constraints += [
             ('unique_value', 'UNIQUE(value)',
                 'Permissions must be unique by value'),
             ]
 
-Permission()
 
 
 class UserPermission(ModelSQL):
     "Nereid User Permissions"
-    _name = 'nereid.permission-nereid.user'
-    _description = __doc__
+    __name__ = 'nereid.permission-nereid.user'
 
     permission = fields.Many2One('nereid.permission', 'Permission',
         ondelete='CASCADE', select=True, required=True)
     nereid_user = fields.Many2One('nereid.user', 'User',
         ondelete='CASCADE', select=True, required=True)
-
-UserPermission()
