@@ -10,22 +10,6 @@ import re
 
 from setuptools import setup, Command
 
-class RunTests(Command):
-    description = "Run tests"
-
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        import sys,subprocess
-        errno = subprocess.call([sys.executable, 'tests/__init__.py'])
-        raise SystemExit(errno)
-
 
 class run_audit(Command):
     """Audits source code using PyFlakes for following issues:
