@@ -4,5 +4,5 @@ python:
   - "2.7"
 install:
   - python setup.py install
-  - pip install git+git://github.com/openlabs/nereid.git@feature/2.6
+  - pip install git+git://github.com/openlabs/nereid.git@develop
 script: python setup.py test
