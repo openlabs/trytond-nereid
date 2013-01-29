@@ -14,6 +14,7 @@ from test_auth import TestAuth
 from test_address import TestAddress
 from test_i18n import TestI18N
 from test_static_file import TestStaticFile
+from test_currency import TestCurrency
 
 
 def suite():
@@ -29,6 +30,9 @@ def suite():
     )
     test_suite.addTests(
         unittest.TestLoader().loadTestsFromTestCase(TestStaticFile)
+    )
+    test_suite.addTests(
+        unittest.TestLoader().loadTestsFromTestCase(TestCurrency)
     )
     return test_suite
 
