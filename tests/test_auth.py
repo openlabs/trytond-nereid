@@ -1,12 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-
-    Test the Auth layer
-
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details.
-"""
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 import unittest
 
 from mock import patch
@@ -57,27 +51,27 @@ class TestAuth(NereidTestCase):
             'code': 'USD',
             'symbol': '$',
         })
-        self.company_id = self.company_obj.create({
+        self.company = self.company_obj.create({
             'name': 'Openlabs',
             'currency': usd
         })
-        self.guest_user_id = self.nereid_user_obj.create({
+        self.guest_user = self.nereid_user_obj.create({
             'name': 'Guest User',
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': self.company_id,
+            'company': self.company,
         })
 
-        url_map_id, = self.url_map_obj.search([], limit=1)
+        url_map, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
         self.nereid_website_obj.create({
             'name': 'localhost',
-            'url_map': url_map_id,
-            'company': self.company_id,
+            'url_map': url_map,
+            'company': self.company,
             'application_user': USER,
             'default_language': en_us,
-            'guest_user': self.guest_user_id,
+            'guest_user': self.guest_user,
         })
         self.templates = {
             'localhost/home.jinja': '{{get_flashed_messages()}}',
@@ -156,6 +150,29 @@ class TestAuth(NereidTestCase):
                 ), 1
             )
 
+    def test_0015_match_password(self):
+        """
+        Assert that matching of password works
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            usd = self.currency_obj.create({
+                'name': 'US Dollar',
+                'code': 'USD',
+                'symbol': '$',
+            })
+            company = self.company_obj.create({
+                'name': 'Openlabs',
+                'currency': usd
+            })
+            registered_user = self.nereid_user_obj.create({
+                'name': 'Registered User',
+                'display_name': 'Registered User',
+                'email': 'email@example.com',
+                'password': 'password',
+                'company': company,
+            })
+            self.assertTrue(registered_user.match_password('password'))
+
     def test_0020_activation(self):
         """
         Activation must happen before login is possible
@@ -175,10 +192,9 @@ class TestAuth(NereidTestCase):
                 response = c.post('/en_US/registration', data=data)
                 self.assertEqual(response.status_code, 302)
 
-                regd_user_id, = self.nereid_user_obj.search(
+                registered_user, = self.nereid_user_obj.search(
                     [('email', '=', data['email'])]
                 )
-                registered_user = self.nereid_user_obj.browse(regd_user_id)
                 self.assertTrue(registered_user.activation_code)
 
                 # Login should fail since there is activation code
@@ -200,7 +216,7 @@ class TestAuth(NereidTestCase):
                     )
                 )
                 self.assertEqual(response.status_code, 302)
-                registered_user = self.nereid_user_obj.browse(regd_user_id)
+                registered_user = self.nereid_user_obj(registered_user.id)
 
                 # Activation code must be cleared
                 self.assertFalse(registered_user.activation_code)
@@ -213,6 +229,7 @@ class TestAuth(NereidTestCase):
                         'password': data['password'],
                     }
                 )
+                registered_user = self.nereid_user_obj(registered_user.id)
                 self.assertEqual(response.status_code, 302)
 
     def test_0030_change_password(self):
@@ -228,7 +245,7 @@ class TestAuth(NereidTestCase):
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
-                'company': self.company_id,
+                'company': self.company,
             }
             self.nereid_user_obj.create(data.copy())
 
@@ -308,9 +325,9 @@ class TestAuth(NereidTestCase):
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
-                'company': self.company_id,
+                'company': self.company,
             }
-            registered_user_id = self.nereid_user_obj.create(data.copy())
+            regd_user = self.nereid_user_obj.create(data.copy())
 
             with app.test_client() as c:
 
@@ -324,7 +341,6 @@ class TestAuth(NereidTestCase):
                 })
                 self.assertEqual(response.status_code, 302)
 
-                regd_user = self.nereid_user_obj.browse(registered_user_id)
                 self.assertTrue(regd_user.activation_code)
 
                 # A successful login after requesting activation code should
@@ -337,7 +353,7 @@ class TestAuth(NereidTestCase):
                     }
                 )
                 self.assertEqual(response.status_code, 302)
-                regd_user = self.nereid_user_obj.browse(registered_user_id)
+                regd_user = self.nereid_user_obj(regd_user.id)
                 self.assertFalse(regd_user.activation_code)
 
             with app.test_client() as c:
@@ -347,7 +363,7 @@ class TestAuth(NereidTestCase):
                 })
                 self.assertEqual(response.status_code, 302)
 
-                regd_user = self.nereid_user_obj.browse(registered_user_id)
+                regd_user = self.nereid_user_obj(regd_user.id)
                 self.assertTrue(regd_user.activation_code)
 
                 response = c.get(
@@ -364,7 +380,7 @@ class TestAuth(NereidTestCase):
                 })
                 self.assertEqual(response.status_code, 302)
 
-                regd_user = self.nereid_user_obj.browse(registered_user_id)
+                regd_user = self.nereid_user_obj(regd_user.id)
                 self.assertFalse(regd_user.activation_code)
 
                 response = c.post('/en_US/login',
@@ -396,7 +412,7 @@ class TestAuth(NereidTestCase):
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
-                'company': self.company_id,
+                'company': self.company,
             }
             self.nereid_user_obj.create(data.copy())
 
@@ -444,7 +460,7 @@ class TestAuth(NereidTestCase):
             })
 
             self.nereid_user_obj.write(
-                self.guest_user_id, {'permissions': [('set', [perm_admin])]}
+                [self.guest_user], {'permissions': [('set', [perm_admin])]}
             )
             @permissions_required(['admin'])
             def test_permission_2():
@@ -461,7 +477,7 @@ class TestAuth(NereidTestCase):
                 self.assertRaises(Forbidden, test_permission_3)
 
             self.nereid_user_obj.write(
-                self.guest_user_id,
+                [self.guest_user],
                 {'permissions': [('set', [perm_admin, perm_nereid_admin])]}
             )
             with app.test_request_context():
@@ -476,7 +492,7 @@ class TestAuth(NereidTestCase):
             app = self.get_app()
 
             self.templates['localhost/home.jinja'] = """
-            {{ request.nereid_user.get_profile_picture(request.nereid_user) }}
+            {{ request.nereid_user.get_profile_picture() }}
             """
 
             with app.test_client() as c:

@@ -1,30 +1,28 @@
-# -*- coding: utf-8 -*-
-"""
-    currency
-
-    Currency handling at core level
-
-    :copyright: © 2011-2012 by Openlabs Technologies & Consulting (P) Limited
-    :license: GPLv3, see LICENSE for more details.
-"""
-from trytond.model import ModelView, ModelSQL
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+from trytond.model import ModelView, ModelSQL, fields
 from nereid import request
+
+__all__ = ['Currency', 'Language']
 
 class Currency(ModelSQL, ModelView):
     '''Currency Manipulation for core.'''
-    _name = 'currency.currency'
+    __name__ = 'currency.currency'
 
-    def convert(self, amount):
+    @classmethod
+    def convert(cls, amount):
         """A helper method which converts the amount from the currency of the
         company which owns the current website to the currency of the current
         session.
         """
-        return self.compute(
-            request.nereid_website.company.currency.id,
+        return cls.compute(
+            request.nereid_website.company.currency,
             amount,
-            request.nereid_currency.id)
+            request.nereid_currency
+        )
 
-    def context_processor(self):
+    @classmethod
+    def context_processor(cls):
         """Register compute as convert template context function.
 
         Usage:
@@ -32,8 +30,14 @@ class Currency(ModelSQL, ModelView):
         Eg: convert
         """
         return {
-            'compute': self.compute,
-            'convert': self.convert
-            }
+            'compute': cls.compute,
+            'convert': cls.convert
+        }
 
-Currency()
+
+class Language(ModelSQL, ModelView):
+    __name__ = "ir.lang"
+
+    default_currency = fields.Many2One(
+        'currency.currency', 'Default Currency'
+    )

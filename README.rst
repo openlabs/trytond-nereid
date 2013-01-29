@@ -1,5 +1,30 @@
-Using Babel to translate nereid
-===============================
+trytond-nereid
+==============
+
+This is the base module required for `Nereid <http://nereid.openlabs.co.in>`_
+to work. The module creates the models and the `tryton <http://trytond.org>`_
+views for the basic module to work.
+
+.. image:: https://travis-ci.org/openlabs/trytond-nereid.png?branch=feature/2.6
+
+Copyright
+---------
+
+Read COPYRIGHT
+
+License
+-------
+
+GPL3 - Read LICENSE
+
+Installation
+------------
+
+Read INSTALL
+
+
+Using Babel to translate trytond-nereid
+---------------------------------------
 
 The basic steps in translation are:
 
@@ -9,13 +34,13 @@ The basic steps in translation are:
   * compile the translations
 
 To extract translations
------------------------
+```````````````````````
 
     pybabel extract -F babel.cfg -o i18n/messages.pot .
 
 
 To Translate to new language
-----------------------------
+`````````````````````````````
 
     pybabel init -i i18n/messages.pot -d i18n -l pt_BR
 
@@ -25,14 +50,14 @@ Check out some gettext tutorials if you feel lost.
 
 
 To compile the translations for use
------------------------------------
+```````````````````````````````````
 
 
     pybabel compile -d i18n
 
 
 What if the strings change?
-----------------------------
+```````````````````````````
 
 
     pybabel update -i i18n/messages.pot -d i18n

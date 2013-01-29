@@ -23,36 +23,20 @@
         <menuitem name="Configuration" sequence="10"
                   id="menu_nereid_configuration" parent="menu_nereid" />
 
-
-        <!--Party Address-->
-        <record model="ir.ui.view" id="party_address_view_form_nereid">
-            <field name="model">party.address</field>
-            <field name="type">form</field>
-            <field name="inherit" ref="party.address_view_form"/>
+        <record model="ir.ui.view" id="lang_view_tree">
+            <field name="model">ir.lang</field>
+            <field name="type">tree</field>
+            <field name="inherit" ref="ir.lang_view_tree"/>
             <field name="arch" type="xml">
                 <![CDATA[
-                <data>
-                    <xpath expr="/form/field[@name=&quot;subdivision&quot;]" 
-                                                        position="after">
-                        <newline/>
-                        <label name="email"/>
-                        <field name="email"/>
-                        <label name="phone"/>
-                        <field name="phone"/>
-                        <newline/>
-                        <button string="Create/Reset Web Account" 
-                          name="create_web_account" type="object"
-                          confirm="Do you want to create a web login for this contact?
-This will send an email with password to user." 
-                          colspan="3"/>
-                        <newline/>
-                        <field name="additional_details" colspan="4"/>
+                  <data>
+                    <xpath expr="/tree/field[@name='active']" position="after">
+                        <field name="default_currency"/>
                     </xpath>
-                </data>
+                  </data>
                 ]]>
             </field>
         </record>
-
 
         <!-- Routing -->
         <menuitem name="Routing" id="menu_nereid_routing"

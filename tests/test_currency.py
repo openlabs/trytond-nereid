@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-"""
-
-    Test the currency URL handling
-
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details.
-"""
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 import unittest
+from decimal import Decimal
 
 import trytond.tests.test_tryton
 from trytond.tests.test_tryton import POOL, USER, DB_NAME, CONTEXT
@@ -39,64 +35,69 @@ class TestCurrency(NereidTestCase):
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
+            'rates': [('create', {'rate': Decimal('1')})],
         })
-        self.company_id = self.company_obj.create({
+        self.company = self.company_obj.create({
             'name': 'Openlabs',
             'currency': usd
         })
-        self.company = self.company_obj.browse(self.company_id)
         self.guest_user_id = self.nereid_user_obj.create({
             'name': 'Guest User',
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': self.company_id,
+            'company': self.company,
         })
         c1 = self.currency_obj.create({
             'code': 'C1',
             'symbol': 'C1',
             'name': 'Currency 1',
+            'rates': [('create', {'rate': Decimal('10')})],
+
         })
         c2 = self.currency_obj.create({
             'code': 'C2',
             'symbol': 'C2',
             'name': 'Currency 2',
+            'rates': [('create', {'rate': Decimal('20')})],
         })
         self.lang_currency = self.currency_obj.create({
             'code': 'C3',
             'symbol': 'C3',
             'name': 'Currency 3',
+            'rates': [('create', {'rate': Decimal('30')})],
         })
         self.currency_obj.create({
             'code': 'C4',
             'symbol': 'C4',
             'name': 'Currency 4',
+            'rates': [('create', {'rate': Decimal('40')})],
         })
-        self.website_currency_ids = [c1, c2]
-        url_map_id, = self.url_map_obj.search([], limit=1)
-        self.en_us_id, = self.language_obj.search([('code', '=', 'en_US')])
+        self.website_currencies = [c1, c2]
+        url_map, = self.url_map_obj.search([], limit=1)
+        self.en_us, = self.language_obj.search([('code', '=', 'en_US')])
         self.nereid_website_obj.create({
             'name': 'localhost',
-            'url_map': url_map_id,
-            'company': self.company_id,
+            'url_map': url_map,
+            'company': self.company,
             'application_user': USER,
-            'default_language': self.en_us_id,
+            'default_language': self.en_us,
             'guest_user': self.guest_user_id,
-            'currencies': [('set', self.website_currency_ids)],
+            'currencies': [('set', self.website_currencies)],
         })
+        self.templates = {
+            'localhost/home.jinja': '{{ request.nereid_currency.id }}',
+        }
 
     def get_template_source(self, name):
         """
         Return templates
         """
-        templates = {
-            'localhost/home.jinja': '{{ request.nereid_currency.id }}',
-        }
-        return templates.get(name)
+        return self.templates.get(name)
 
     def test_0010_currency_from_company(self):
         """
-        Do not set a currency for the language, and the failover of
+        Do not set a currency for the language, and the fail over of
         picking currency from company should work.
         """
         with Transaction().start(DB_NAME, USER, CONTEXT):
@@ -109,6 +110,12 @@ class TestCurrency(NereidTestCase):
 
             self.assertEqual(int(rv.data), self.company.currency.id)
 
+            with app.test_request_context('/en_US/'):
+                self.assertEqual(
+                    self.currency_obj.convert(Decimal('100')), Decimal('100')
+                )
+
+
     def test_0020_currency_from_language(self):
         """
         Set the currency for the language and check if the currency
@@ -119,13 +126,19 @@ class TestCurrency(NereidTestCase):
             app = self.get_app()
 
             self.language_obj.write(
-                self.en_us_id, {'default_currency': self.lang_currency}
+                [self.en_us], {'default_currency': self.lang_currency}
             )
             with app.test_client() as c:
                 rv = c.get('/en_US/')
                 self.assertEqual(rv.status_code, 200)
 
-            self.assertEqual(int(rv.data), self.lang_currency)
+            self.assertEqual(int(rv.data), int(self.lang_currency))
+
+            with app.test_request_context('/en_US/'):
+                self.assertEqual(
+                    self.currency_obj.convert(Decimal('100')), Decimal('3000')
+                )
+
 
 def suite():
     "Currency test suite"
