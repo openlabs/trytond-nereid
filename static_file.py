@@ -4,7 +4,7 @@
 
     Static file
 
-    :copyright: (c) 2011-2012 Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2011-2013 Openlabs Technologies & Consulting (P) Limited
     :copyright: (c) 2010 by Sharoon Thomas.
     :license: GPLv3, see LICENSE for more details
 '''
@@ -115,7 +115,8 @@ class NereidStaticFile(ModelSQL, ModelView):
     #: This function field returns the field contents. This is useful if the
     #: field is going to be displayed on the clients.
     file_binary = fields.Function(
-        fields.Binary('File'), 'get_file_binary', 'set_file_binary',
+        fields.Binary('File', filename='name'),
+        'get_file_binary', 'set_file_binary',
     )
 
     #: Full path to the file in the filesystem
@@ -144,6 +145,20 @@ class NereidStaticFile(ModelSQL, ModelView):
     def default_type(self):
         return 'local'
 
+    def _get_url(self, static_file):
+        """
+        Return the URL for the given static file
+
+        :param static_file: Browse Record of the static file
+        """
+        if static_file.type == 'local':
+            return url_for(
+                'nereid.static.file.send_static_file',
+                folder=static_file.folder.folder_name, name=static_file.name
+            )
+        elif static_file.type == 'remote':
+            return static_file.remote_path
+
     def get_url(self, ids, name):
         """Return the url if within an active request context or return
         False values
@@ -152,14 +167,8 @@ class NereidStaticFile(ModelSQL, ModelView):
         if _request_ctx_stack.top is None:
             return res
 
-        for f in self.browse(ids):
-            if f.type == 'local':
-                res[f.id] = url_for(
-                    'nereid.static.file.send_static_file',
-                    folder=f.folder.folder_name, name=f.name
-                )
-            elif f.type == 'remote':
-                res[f.id] = f.remote_path
+        for static_file in self.browse(ids):
+            res[static_file.id] = self._get_url(static_file)
         return res
 
     def get_nereid_base_path(self):
@@ -184,31 +193,49 @@ class NereidStaticFile(ModelSQL, ModelView):
         :param name: Ignored
         :param value: The file buffer
         """
-        for f in self.browse(ids):
-            if f.type == 'local':
-                file_binary = buffer(value)
-                # If the folder does not exist, create it recursively
-                directory = os.path.dirname(f.file_path)
-                if not os.path.isdir(directory):
-                    os.makedirs(directory)
-                with open(f.file_path, 'wb') as file_writer:
-                    file_writer.write(file_binary)
+        for static_file in self.browse(ids):
+            self._set_file_binary(static_file, value)
+
+    def _set_file_binary(self, static_file, value):
+        """
+        Setter for static file that stores file in file system
+
+        :param static_file: Browse record of static_file
+        :param value: The value to set
+        """
+        if static_file.type == 'local':
+            file_binary = buffer(value)
+            # If the folder does not exist, create it recursively
+            directory = os.path.dirname(static_file.file_path)
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+            with open(static_file.file_path, 'wb') as file_writer:
+                file_writer.write(file_binary)
 
     def get_file_binary(self, ids, name):
         '''
         Getter for the binary_file field. This fetches the file from the
-        file system, coverts it to buffer and returns it.
+        file system.
 
         :param ids: the ids of the sales
         :return: Dictionary with ID as key and file buffer as value
         '''
         res = {}
-        for f in self.browse(ids):
-            location = f.file_path if f.type == 'local' \
-                else urllib.urlretrieve(f.remote_path)[0]
-            with open(location, 'rb') as file_reader:
-                res[f.id] = buffer(file_reader.read())
+        for static_file in self.browse(ids):
+            res[static_file.id] = self._get_file_binary(static_file)
         return res
+
+    def _get_file_binary(self, static_file):
+        '''
+        Getter for the binary_file field. This fetches the file from the
+        file system, coverts it to buffer and returns it.
+
+        :param static_file: Browse record of the static file
+        '''
+        location = static_file.file_path if static_file.type == 'local' \
+            else urllib.urlretrieve(static_file.remote_path)[0]
+        with open(location, 'rb') as file_reader:
+            return buffer(file_reader.read())
 
     def get_file_path(self, ids, name):
         """
@@ -218,14 +245,22 @@ class NereidStaticFile(ModelSQL, ModelView):
         :return: Dictionary with ID as key and binary
         """
         res = {}
-        for f in self.browse(ids):
-
-            res[f.id] = os.path.abspath(
-                os.path.join(
-                    self.get_nereid_base_path(), f.folder.folder_name, f.name
-                )) \
-            if f.type == 'local' else f.remote_path
+        for static_file in self.browse(ids):
+            res[static_file.id] = self._get_file_path(static_file)
         return res
+
+    def _get_file_path(self, static_file):
+        """
+        Returns the path for static file
+
+        :param: static_file: Browse record of the static file
+        """
+        return os.path.abspath(
+                os.path.join(
+                    self.get_nereid_base_path(), static_file.folder.folder_name, static_file.name
+                )) \
+            if static_file.type == 'local' else static_file.remote_path
+
 
     def check_file_name(self, ids):
         '''
@@ -243,7 +278,7 @@ class NereidStaticFile(ModelSQL, ModelView):
     def send_static_file(self, folder, name):
         """
         Invokes the send_file method in nereid.helpers to send a file as the
-        response to the reuqest. The file is sent in a way which is as 
+        response to the reuqest. The file is sent in a way which is as
         efficient as possible. For example nereid will use the X-Send_file
         header to make nginx send the file if possible.
 
