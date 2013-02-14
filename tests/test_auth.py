@@ -86,6 +86,7 @@ class TestAuth(NereidTestCase):
             'localhost/address-edit.jinja': 'Address Edit {{ form.errors }}',
             'localhost/address.jinja': '',
             'localhost/account.jinja': '',
+            'localhost/profile.jinja': '{{ request.nereid_user.display_name }}',
             'localhost/emails/activation-text.jinja': 'activation-email-text',
             'localhost/emails/activation-html.jinja': 'activation-email-html',
             'localhost/emails/reset-text.jinja': 'reset-email-text',
@@ -500,6 +501,71 @@ class TestAuth(NereidTestCase):
                 self.assertTrue(
                     'http://www.gravatar.com/avatar/' in response.data
                 )
+
+    def test_0080_display_name(self):
+        """
+        Check if just creating party and then user handles the nereid user
+        creation well
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+
+            party = self.party_obj.create({
+                'name': 'Test Party'
+            })
+            print party
+            nereid_user = self.nereid_user_obj.create({
+                'party': party.id,
+                'company': self.company,
+            })
+            #self.assertTrue(nereid_user)
+            #self.assertEqual(nereid_user.display_name, party.name)
+
+    def test_0090_profile(self):
+        """
+        Test the profile functionality
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            data = {
+                'name': 'Registered User',
+                'display_name': 'Registered User',
+                'email': 'email@example.com',
+                'password': 'password',
+                'company': self.company,
+            }
+            self.nereid_user_obj.create(data.copy())
+
+            with app.test_client() as c:
+                response = c.get('/en_US/me')
+                self.assertEqual(response.status_code, 302)
+
+                # Login and check again
+                response = c.post(
+                    '/en_US/login',
+                    data={'email': data['email'], 'password': data['password']}
+                )
+                response = c.get('/en_US/me')
+                self.assertEqual(response.data, data['display_name'])
+
+                # Change the display name of the user
+                response = c.post(
+                    '/en_US/me', data={
+                        'display_name': 'Regd User',
+                        'timezone': 'UTC',
+                        'email': 'cannot@openlabs.co.in',
+                    }
+                )
+                self.assertEqual(response.status_code, 302)
+                self.assertTrue(
+                    '/en_US/me' in response.data
+                )
+
+                response = c.get('/en_US/me')
+                self.assertEqual(response.data, 'Regd User')
+
 
 
 def suite():

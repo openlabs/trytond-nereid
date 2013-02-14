@@ -1,11 +1,6 @@
-'''
-    Nereid
-
-    Nereid - Tryton as a web framework
-
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details
-'''
+#!/usr/bin/env python
+#This file is part of Tryton and Nereid.  The COPYRIGHT file at the top level of
+#this repository contains the full copyright notices and license terms.
 import re
 import os
 import ConfigParser
