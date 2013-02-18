@@ -502,25 +502,6 @@ class TestAuth(NereidTestCase):
                     'http://www.gravatar.com/avatar/' in response.data
                 )
 
-    def test_0080_display_name(self):
-        """
-        Check if just creating party and then user handles the nereid user
-        creation well
-        """
-        with Transaction().start(DB_NAME, USER, CONTEXT):
-            self.setup_defaults()
-
-            party = self.party_obj.create({
-                'name': 'Test Party'
-            })
-            print party
-            nereid_user = self.nereid_user_obj.create({
-                'party': party.id,
-                'company': self.company,
-            })
-            #self.assertTrue(nereid_user)
-            #self.assertEqual(nereid_user.display_name, party.name)
-
     def test_0090_profile(self):
         """
         Test the profile functionality

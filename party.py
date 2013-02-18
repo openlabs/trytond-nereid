@@ -310,16 +310,6 @@ class NereidUser(ModelSQL, ModelView):
                     'Invalid Activation Code'
         return self.write([self], {'activation_code': None})
 
-    @classmethod
-    def search_display_name(cls, name, clause):
-        """
-        Alter the display_name search pattern to search in the name field
-
-        :param name: Name of the field for which the search is being done
-        :param clause: The search clause from the domain expression
-        """
-        return [('name') + clause[1:]]
-
     @staticmethod
     def get_registration_form():
         """
@@ -636,12 +626,6 @@ class NereidUser(ModelSQL, ModelView):
         :param values: Dictionary of Values
         """
         values = cls._convert_values(values.copy())
-        if 'display_name' not in values:
-            if 'name' in values:
-                values['display_name'] = values['name']
-            elif 'party' in values:
-                party = Party(values['party'])
-                values['display_name'] = party.name
         return super(NereidUser, cls).create(values)
 
     @classmethod
