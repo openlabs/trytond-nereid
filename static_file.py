@@ -101,7 +101,8 @@ class NereidStaticFile(ModelSQL, ModelView):
     #: This function field returns the field contents. This is useful if the
     #: field is going to be displayed on the clients.
     file_binary = fields.Function(
-        fields.Binary('File'), 'get_file_binary', 'set_file_binary',
+        fields.Binary('File', filename='name'),
+        'get_file_binary', 'set_file_binary',
     )
 
     #: Full path to the file in the filesystem
@@ -162,32 +163,40 @@ class NereidStaticFile(ModelSQL, ModelView):
             CONFIG['data_path'], cursor.database_name, "nereid"
         )
 
+    def _set_file_binary(self, value):
+        """
+        Setter for static file that stores file in file system
+
+        :param value: The value to set
+        """
+        if self.type == 'local':
+            file_binary = buffer(value)
+            # If the folder does not exist, create it recursively
+            directory = os.path.dirname(self.file_path)
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+            with open(self.file_path, 'wb') as file_writer:
+                file_writer.write(file_binary)
+
     @classmethod
     def set_file_binary(cls, files, name, value):
         """
         Setter for the functional binary field.
 
-        :param ids: List of ids. But usually has just one
+        :param files: Records
         :param name: Ignored
         :param value: The file buffer
         """
-        for f in files:
-            if f.type == 'local':
-                file_binary = buffer(value)
-                # If the folder does not exist, create it recursively
-                directory = os.path.dirname(f.file_path)
-                if not os.path.isdir(directory):
-                    os.makedirs(directory)
-                with open(f.file_path, 'wb') as file_writer:
-                    file_writer.write(file_binary)
+        for static_file in files:
+            static_file._set_file_binary(value)
 
     def get_file_binary(self, name):
         '''
         Getter for the binary_file field. This fetches the file from the
         file system, coverts it to buffer and returns it.
 
-        :param ids: the ids of the sales
-        :return: Dictionary with ID as key and file buffer as value
+        :param name: Field name
+        :return: File buffer
         '''
         location = self.file_path if self.type == 'local' \
             else urllib.urlretrieve(self.remote_path)[0]
@@ -198,8 +207,8 @@ class NereidStaticFile(ModelSQL, ModelView):
         """
         Returns the full path to the file in the file system
 
-        :param ids: the ids of the sales
-        :return: Dictionary with ID as key and binary
+        :param name: Field name
+        :return: File path
         """
         return os.path.abspath(
                 os.path.join(
@@ -222,7 +231,7 @@ class NereidStaticFile(ModelSQL, ModelView):
     def send_static_file(cls, folder, name):
         """
         Invokes the send_file method in nereid.helpers to send a file as the
-        response to the reuqest. The file is sent in a way which is as 
+        response to the request. The file is sent in a way which is as
         efficient as possible. For example nereid will use the X-Send_file
         header to make nginx send the file if possible.
 
