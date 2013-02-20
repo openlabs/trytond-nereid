@@ -92,6 +92,13 @@ minor_version = int(minor_version)
 requires = [
     'pytz',
 ]
+
+# Add nereid of the same series as a requirement
+requires.append(
+    'nereid >= %s.%s, < %s.%s' % (
+        major_version, minor_version, major_version, minor_version + 1
+    )
+)
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res|webdav)(\W|$)', dep):
         requires.append('trytond_%s >= %s.%s, < %s.%s' %
