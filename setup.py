@@ -58,7 +58,9 @@ major_version, minor_version, _ = trytond_module_info.get(
 major_version = int(major_version)
 minor_version = int(minor_version)
 
-tryton_requires = []
+tryton_requires = [
+    'nereid>=2.4,<2.5',
+]
 for dep in trytond_module_info.get('depends', []):
     if not re.match(r'(ir|res|workflow|webdav)(\W|$)', dep):
         tryton_requires.append('trytond_%s >= %s.%s, < %s.%s' %
