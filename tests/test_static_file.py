@@ -3,7 +3,7 @@
 """
     test_static_file
 
-    Test the static file feature of nereid  
+    Test the static file feature of nereid
 
     :copyright: (c) 2012-2013 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details.

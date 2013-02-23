@@ -171,5 +171,14 @@
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
+        <record id="user_profile" model="nereid.url_rule">
+            <field name="rule">/&lt;language&gt;/me</field>
+            <field name="endpoint">nereid.user.profile</field>
+            <field name="sequence" eval="300" />
+            <field name="http_method_get" eval="True"/>
+            <field name="http_method_post" eval="True"/>
+            <field name="url_map" ref="nereid.default_url_map" />
+          </record>
+
     </data>
 </tryton>

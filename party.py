@@ -199,6 +199,20 @@ class Party(ModelSQL, ModelView):
     nereid_users = fields.One2Many('nereid.user', 'party', 'Nereid Users')
 
 
+class ProfileForm(Form):
+    """User Profile Form"""
+    display_name = TextField('Display Name', [validators.Required(),],
+        description="Your display name"
+    )
+    timezone = SelectField('Timezone',
+        choices = [(tz, tz) for tz in pytz.common_timezones],
+        coerce=unicode, description="Your timezone"
+    )
+    email = TextField('Email', [validators.Required(), validators.Email()],
+        description="Your Login Email. This Cannot be edited."
+    )
+
+
 class NereidUser(ModelSQL, ModelView):
     """
     Nereid Users
@@ -295,16 +309,6 @@ class NereidUser(ModelSQL, ModelView):
         assert self.activation_code == activation_code, \
                     'Invalid Activation Code'
         return self.write([self], {'activation_code': None})
-
-    @classmethod
-    def search_display_name(cls, name, clause):
-        """
-        Alter the display_name search pattern to search in the name field
-
-        :param name: Name of the field for which the search is being done
-        :param clause: The search clause from the domain expression
-        """
-        return [('name') + clause[1:]]
 
     @staticmethod
     def get_registration_form():
@@ -622,8 +626,6 @@ class NereidUser(ModelSQL, ModelView):
         :param values: Dictionary of Values
         """
         values = cls._convert_values(values.copy())
-        if 'display_name' not in values:
-            values['display_name'] = values['name']
         return super(NereidUser, cls).create(values)
 
     @classmethod
@@ -704,6 +706,28 @@ class NereidUser(ModelSQL, ModelView):
                            information), which is assumed to be the UTC time.
         """
         return self.aslocaltime(naive_date, self.timezone)
+
+    @classmethod
+    @login_required
+    def profile(cls):
+        """
+        User profile
+        """
+        user_form = ProfileForm(request.form, obj=request.nereid_user)
+        if request.method == 'POST' and user_form.validate():
+            cls.write(
+                [request.nereid_user], {
+                    'display_name': user_form.display_name.data,
+                    'timezone': user_form.timezone.data,
+                }
+            )
+            flash('Your profile has been updated.')
+            return redirect(
+                request.args.get('next', url_for('nereid.user.profile'))
+            )
+        return render_template(
+            'profile.jinja', user_form=user_form, active_type_name="general"
+        )
 
 
 class ContactMechanismForm(Form):

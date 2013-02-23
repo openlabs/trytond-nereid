@@ -79,6 +79,8 @@
               <form string="Nereid User">
                   <label name="party"/>
                   <field name="party"/>
+                  <label name="display_name"/>
+                  <field name="display_name"/>
                   <label name="company"/>
                   <field name="company"/>
                   <label name="email"/>
@@ -104,7 +106,7 @@
             <![CDATA[
             <tree string="Nereid User">
                 <field name="code" />
-                <field name="name" />
+                <field name="display_name" />
                 <field name="email" />
                 <field name="company" />
             </tree>

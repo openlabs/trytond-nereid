@@ -1,11 +1,6 @@
-'''
-    Nereid
-
-    Nereid - Tryton as a web framework
-
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
-    :license: GPLv3, see LICENSE for more details
-'''
+#!/usr/bin/env python
+#This file is part of Tryton and Nereid.  The COPYRIGHT file at the top level of
+#this repository contains the full copyright notices and license terms.
 import re
 import os
 import ConfigParser
@@ -94,7 +89,16 @@ major_version, minor_version, _ = info.get('version', '0.0.1').split('.', 2)
 major_version = int(major_version)
 minor_version = int(minor_version)
 
-requires = []
+requires = [
+    'pytz',
+]
+
+# Add nereid of the same series as a requirement
+requires.append(
+    'nereid >= %s.%s, < %s.%s' % (
+        major_version, minor_version, major_version, minor_version + 1
+    )
+)
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res|webdav)(\W|$)', dep):
         requires.append('trytond_%s >= %s.%s, < %s.%s' %
