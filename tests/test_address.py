@@ -154,6 +154,8 @@ class TestAddress(NereidTestCase):
                 'streetbis': 'StreetBis',
                 'zip': 'zip',
                 'city': 'City',
+                'email': 'email@example.com',
+                'phone': '1234567890',
                 'country': self.available_countries[0].id,
                 'subdivision': self.country_obj(
                             self.available_countries[0]
@@ -196,6 +198,8 @@ class TestAddress(NereidTestCase):
                 self.assertEqual(address.streetbis, address_data['streetbis'])
                 self.assertEqual(address.zip, address_data['zip'])
                 self.assertEqual(address.city, address_data['city'])
+                self.assertEqual(address.email, address_data['email'])
+                self.assertEqual(address.phone, address_data['phone'])
                 self.assertEqual(address.country.id, address_data['country'])
                 self.assertEqual(
                     address.subdivision.id, address_data['subdivision']
@@ -218,6 +222,8 @@ class TestAddress(NereidTestCase):
                 'streetbis': 'StreetBis',
                 'zip': 'zip',
                 'city': 'City',
+                'email': 'email@example.com',
+                'phone': '1234567890',
                 'country': self.available_countries[0].id,
                 'subdivision': self.country_obj(
                         self.available_countries[0]).subdivisions[0].id,
@@ -260,6 +266,8 @@ class TestAddress(NereidTestCase):
                 self.assertEqual(address.streetbis, address_data['streetbis'])
                 self.assertEqual(address.zip, address_data['zip'])
                 self.assertEqual(address.city, address_data['city'])
+                self.assertEqual(address.email, address_data['email'])
+                self.assertEqual(address.phone, address_data['phone'])
                 self.assertEqual(address.country.id, address_data['country'])
                 self.assertEqual(
                     address.subdivision.id, address_data['subdivision']
