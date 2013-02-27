@@ -169,17 +169,17 @@ class Address(ModelSQL, ModelView):
             return redirect(url_for('party.address.view_address'))
         elif request.method == 'GET' and address:
             # Its an edit of existing address, prefill data
-            record = cls(address)
+            address = cls(address)
             form = AddressForm(
-                name=record.name,
-                street=record.street,
-                streetbis=record.streetbis,
-                zip=record.zip,
-                city=record.city,
-                country=record.country.id,
-                subdivision=record.subdivision.id,
-                email=record.email,
-                phone=record.phone
+                name=address.name,
+                street=address.street,
+                streetbis=address.streetbis,
+                zip=address.zip,
+                city=address.city,
+                country=address.country and address.country.id,
+                subdivision=address.subdivision and address.subdivision.id,
+                email=address.email,
+                phone=address.phone
             )
             form.country.choices = countries
         return render_template('address-edit.jinja', form=form, address=address)

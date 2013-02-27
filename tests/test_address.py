@@ -125,7 +125,9 @@ class TestAddress(NereidTestCase):
             'localhost/reset-password.jinja': '',
             'localhost/change-password.jinja':
                     '{{ change_password_form.errors }}',
-            'localhost/address-edit.jinja': 'Address Edit {{ form.errors }}',
+            'localhost/address-edit.jinja':
+                'Address Edit {% if address %}ID:{{ address.id }}{% endif %}'
+                '{{ form.errors }}',
             'localhost/address.jinja': '',
             'localhost/account.jinja': '',
             'localhost/emails/activation-text.jinja': 'activation-email-text',
@@ -235,6 +237,11 @@ class TestAddress(NereidTestCase):
                 # automatically with the party
                 self.assertEqual(len(registered_user.party.addresses), 1)
                 existing_address, = registered_user.party.addresses
+
+                response = c.get(
+                    '/en_US/edit-address/%d' % existing_address.id
+                )
+                self.assertTrue('ID:%s' % existing_address.id in response.data)
 
                 # POST to the existing address must updatethe existing address
                 response = c.post(
