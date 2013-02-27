@@ -164,7 +164,7 @@ class Address(ModelSQL, ModelView):
                     'subdivision': form.subdivision.data,
                     'party': request.nereid_user.party.id,
                     'email': form.email.data,
-                    'phone': form.email.data,
+                    'phone': form.phone.data,
                     })
             return redirect(url_for('party.address.view_address'))
         elif request.method == 'GET' and address:
