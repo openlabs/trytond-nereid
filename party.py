@@ -664,7 +664,7 @@ class NereidUser(ModelSQL, ModelView):
         """
 
         user_ids = self.search([
-            ('email', '=', request.form['email']),
+            ('email', '=', email),
             ('company', '=', request.nereid_website.company.id),
             ])
 
