@@ -105,7 +105,7 @@
         <field name="arch" type="xml">
             <![CDATA[
             <tree string="Nereid User">
-                <field name="code" />
+                <field name="party" />
                 <field name="display_name" />
                 <field name="email" />
                 <field name="company" />

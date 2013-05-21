@@ -22,6 +22,7 @@ from nereid.globals import session, current_app
 from nereid.signals import registration
 from nereid.templating import render_email
 from trytond.model import ModelView, ModelSQL, fields
+from trytond.pool import Pool
 from trytond.pyson import Eval, Bool, Not
 from trytond.transaction import Transaction
 from trytond.config import CONFIG
@@ -133,7 +134,7 @@ class Address(ModelSQL, ModelView):
 
         :param address: ID of the address
         """
-        form = AddressForm(request.form, name=request.nereid_user.name)
+        form = AddressForm(request.form, name=request.nereid_user.display_name)
         countries = [
             (c.id, c.name) for c in request.nereid_website.countries
             ]
@@ -154,7 +155,7 @@ class Address(ModelSQL, ModelView):
                     'phone': form.phone.data,
                     })
             else:
-                cls.create({
+                cls.create([{
                     'name': form.name.data,
                     'street': form.street.data,
                     'streetbis': form.streetbis.data,
@@ -165,7 +166,7 @@ class Address(ModelSQL, ModelView):
                     'party': request.nereid_user.party.id,
                     'email': form.email.data,
                     'phone': form.phone.data,
-                    })
+                    }])
             return redirect(url_for('party.address.view_address'))
         elif request.method == 'GET' and address:
             # Its an edit of existing address, prefill data
@@ -218,7 +219,6 @@ class NereidUser(ModelSQL, ModelView):
     Nereid Users
     """
     __name__ = "nereid.user"
-    _inherits = {"party.party": 'party'}
     _rec_name = 'display_name'
 
     party = fields.Many2One('party.party', 'Party', required=True,
@@ -337,6 +337,8 @@ class NereidUser(ModelSQL, ModelView):
         """
         Invokes registration of an user
         """
+        Party = Pool().get('party.party')
+
         registration_form = cls.get_registration_form()
 
         if request.method == 'POST' and registration_form.validate():
@@ -349,13 +351,16 @@ class NereidUser(ModelSQL, ModelView):
                     'Please contact customer care')
                 )
             else:
-                nereid_user = cls.create({
-                    'name': registration_form.name.data,
+                party = Party(name=registration_form.name.data)
+                party.save()
+                nereid_user = cls(**{
+                    'party': party.id,
                     'display_name': registration_form.name.data,
                     'email': registration_form.email.data,
                     'password': registration_form.password.data,
                     'company': request.nereid_website.company.id,
                     })
+                nereid_user.save()
                 nereid_user.create_act_code()
                 registration.send(nereid_user)
                 nereid_user.send_activation_email()
@@ -619,14 +624,14 @@ class NereidUser(ModelSQL, ModelView):
         return values
 
     @classmethod
-    def create(cls, values):
+    def create(cls, vlist):
         """
         Create, but add salt before saving
 
-        :param values: Dictionary of Values
+        :param vlist: List of dictionary of Values
         """
-        values = cls._convert_values(values.copy())
-        return super(NereidUser, cls).create(values)
+        vlist = [cls._convert_values(vals.copy()) for vals in vlist]
+        return super(NereidUser, cls).create(vlist)
 
     @classmethod
     def write(cls, nereid_users, values):
