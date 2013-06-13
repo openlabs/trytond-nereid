@@ -51,40 +51,39 @@ class TestStaticFile(NereidTestCase):
         """
         Setup the defaults
         """
-        usd = self.currency_obj.create({
+        usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
-        })
-        company_id = self.company_obj.create({
+        }])
+        self.party, = self.party_obj.create([{
             'name': 'Openlabs',
-            'currency': usd
-        })
-        guest_user = self.nereid_user_obj.create({
+        }])
+        self.company, = self.company_obj.create([{
+            'party': self.party,
+            'currency': usd,
+        }])
+        self.guest_party, = self.party_obj.create([{
             'name': 'Guest User',
+        }])
+        self.guest_user, = self.nereid_user_obj.create([{
+            'party': self.guest_party,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': company_id,
-        })
-        self.registered_user_id = self.nereid_user_obj.create({
-            'name': 'Registered User',
-            'display_name': 'Registered User',
-            'email': 'email@example.com',
-            'password': 'password',
-            'company': company_id,
-        })
+            'company': self.company.id,
+        }])
 
         url_map_id, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.nereid_website_obj.create({
+        self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map_id,
-            'company': company_id,
+            'company': self.company,
             'application_user': USER,
             'default_language': en_us,
-            'guest_user': guest_user,
-        })
+            'guest_user': self.guest_user,
+        }])
 
     def get_template_source(self, name):
         """
@@ -104,16 +103,16 @@ class TestStaticFile(NereidTestCase):
         """
         Creates the static file for testing
         """
-        folder_id = self.static_folder_obj.create({
+        folder_id, = self.static_folder_obj.create([{
             'folder_name': 'test',
             'description': 'Test Folder'
-        })
+        }])
 
-        return self.static_file_obj.create({
+        return self.static_file_obj.create([{
             'name': 'test.png',
             'folder': folder_id,
             'file_binary': file_buffer,
-        })
+        }])[0]
 
     def test_0010_static_file(self):
         """
@@ -172,16 +171,16 @@ class TestStaticFile(NereidTestCase):
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
 
-            folder_id = self.static_folder_obj.create({
+            folder_id, = self.static_folder_obj.create([{
                 'folder_name': 'test',
                 'description': 'Test Folder'
-            })
-            file = self.static_file_obj.create({
+            }])
+            file, = self.static_file_obj.create([{
                 'name': 'remote.png',
                 'folder': folder_id,
                 'type': 'remote',
                 'remote_path': 'http://openlabs.co.in/logo.png',
-            })
+            }])
             self.assertFalse(file.url)
 
             app = self.get_app()

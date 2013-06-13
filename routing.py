@@ -245,7 +245,7 @@ class WebSite(ModelSQL, ModelView):
             if result:
                 # NOTE: Translators leave %s as such
                 flash(_("You are now logged in. Welcome %(name)s",
-                    name=result.name))
+                    name=result.display_name))
                 session['user'] = result.id
                 login.send()
                 if request.is_xhr:
@@ -398,25 +398,6 @@ class URLRule(ModelSQL, ModelView):
     active = fields.Boolean('Active')
     defaults = fields.One2Many('nereid.url_rule_defaults', 'rule', 'Defaults')
 
-    #: This field will be deprecated from version 2.6.0.1. Set or Unset the
-    #: boolean fields for HTTP methods instead of using this.
-    methods = fields.Function(
-        fields.Selection(
-            [
-                ('("POST",)', 'POST'),
-                ('("GET",)', 'GET'),
-                ('("GET", "POST")', 'GET/POST')
-            ], 'Methods'
-        ), 'get_methods', setter='set_methods'
-    )
-    #: This field is retained for migration, but will be removed in 2.6.0.1
-    old_methods = fields.Selection(
-        [
-            ('("POST",)', 'POST'),
-            ('("GET",)', 'GET'),
-            ('("GET", "POST")', 'GET/POST')
-        ], 'Methods (Deprecated)'
-    )
     # Supported HTTP methods
     http_method_get = fields.Boolean('GET')
     http_method_post = fields.Boolean('POST')
@@ -434,34 +415,6 @@ class URLRule(ModelSQL, ModelView):
         super(URLRule, cls).__setup__()
         cls._order.insert(0, ('sequence', 'ASC'))
 
-    @classmethod
-    def __register__(cls, module_name):
-        """Migrations
-
-        :param module_name: Module Name (Automatically passed by caller)
-        """
-        cursor = Transaction().cursor
-        table = TableHandler(cursor, cls, module_name)
-
-        # Drop the required index on methods
-        table.not_null_action('methods', action="remove")
-
-        # Rename methods to old_methods
-        table.column_rename('methods', 'old_methods')
-
-        # Check if the new boolean fields exist
-        http_method_fields_exists = table.column_exist('http_method_get')
-
-        super(URLRule, cls).__register__(module_name)
-
-        if not http_method_fields_exists:
-            # if the http method fields did not exist before this method
-            # should transition old_methods to the boolean fields
-            rules = cls.search([])
-            for rule in rules:
-                cls.set_methods([rule.id], 'methods', rule.old_methods)
-
-
     @staticmethod
     def default_active():
         return True
@@ -469,42 +422,6 @@ class URLRule(ModelSQL, ModelView):
     @staticmethod
     def default_http_method_get():
         return True
-
-    def get_methods(self, name):
-        """
-        The methods field will be deprecated in 2.6.0.1. Till then display the
-        field value based on the boolean fields which replaces the selection
-        field.
-
-        Note that this only handles GET and POST methods as they were the only
-        ones handled before v2.4.0.6.
-
-        :param name: Name of the function field
-        """
-        if self.http_method_get and self.http_method_post:
-            return'("GET", "POST")'
-        elif self.http_method_post and not self.http_method_get:
-            return '("POST",)'
-        else:
-            return '("GET",)'
-
-    @classmethod
-    def set_methods(cls, urls, name, value):
-        """
-        Set the values of http_* boolean fields based on the value of methods
-
-        :param ids: List of ids to update
-        :param name: Name of function field
-        :param value: The string value of tuple used in methods selection
-        """
-        methods, write_vals = literal_eval(value), {}
-        if 'GET' in methods:
-            write_vals['http_method_get'] = True
-        if 'POST' in methods:
-            write_vals['http_method_post'] = True
-        if write_vals:
-            cls.write(urls, write_vals)
-        return
 
     def get_http_methods(self):
         """

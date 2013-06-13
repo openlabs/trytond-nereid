@@ -50,10 +50,10 @@ class TestAddress(NereidTestCase):
         Create some sample countries and subdivisions
         """
         for country in list(pycountry.countries)[0:count]:
-            country_id = self.country_obj.create({
+            country_id, = self.country_obj.create([{
                 'name': country.name,
                 'code': country.alpha2,
-            })
+            }])
             try:
                 divisions = pycountry.subdivisions.get(
                     country_code=country.alpha2
@@ -61,56 +61,64 @@ class TestAddress(NereidTestCase):
             except KeyError:
                 pass
             else:
-                for subdivision in list(divisions)[0:count]:
-                    self.subdivision_obj.create({
-                        'country': country_id,
-                        'name': subdivision.name,
-                        'code': subdivision.code,
-                        'type': subdivision.type.lower(),
-                    })
+                self.subdivision_obj.create([{
+                    'country': country_id,
+                    'name': subdivision.name,
+                    'code': subdivision.code,
+                    'type': subdivision.type.lower(),
+                } for subdivision in list(divisions)[0:count]])
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
-        usd = self.currency_obj.create({
+        usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
-        })
-        company_id = self.company_obj.create({
+        }])
+        self.party, = self.party_obj.create([{
             'name': 'Openlabs',
-            'currency': usd
-        })
-        guest_user = self.nereid_user_obj.create({
+        }])
+        self.company, = self.company_obj.create([{
+            'party': self.party,
+            'currency': usd,
+        }])
+        self.guest_party, = self.party_obj.create([{
             'name': 'Guest User',
+        }])
+        self.guest_user, = self.nereid_user_obj.create([{
+            'party': self.guest_party,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': company_id,
-        })
-        self.registered_user_id = self.nereid_user_obj.create({
+            'company': self.company.id,
+        }])
+        party, = self.party_obj.create([{
             'name': 'Registered User',
+        }])
+        self.registered_user, = self.nereid_user_obj.create([{
+            'party': party,
             'display_name': 'Registered User',
             'email': 'email@example.com',
             'password': 'password',
-            'company': company_id,
-        })
+            'company': self.company,
+        }])
 
         self.create_countries()
         self.available_countries = self.country_obj.search([], limit=5)
 
         url_map_id, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.nereid_website_obj.create({
+        self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map_id,
-            'company': company_id,
+            'company': self.company,
             'application_user': USER,
             'default_language': en_us,
-            'guest_user': guest_user,
+            'guest_user': self.guest_user,
             'countries': [('set', self.available_countries)],
-        })
+        }])
 
     def get_template_source(self, name):
         """
@@ -145,9 +153,8 @@ class TestAddress(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
-            registered_user = self.nereid_user_obj(
-                self.registered_user_id
-            )
+            registered_user = self.registered_user
+
             address_data = {
                 'name': 'Name',
                 'street': 'Street',
@@ -183,7 +190,7 @@ class TestAddress(NereidTestCase):
 
                 # Re browse the record
                 registered_user = self.nereid_user_obj(
-                    self.registered_user_id
+                    self.registered_user.id
                 )
                 # Check if the user has two addresses now
                 self.assertEqual(len(registered_user.party.addresses), 2)
@@ -213,9 +220,7 @@ class TestAddress(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
-            registered_user = self.nereid_user_obj(
-                self.registered_user_id
-            )
+            registered_user = self.registered_user
             address_data = {
                 'name': 'Name',
                 'street': 'Street',

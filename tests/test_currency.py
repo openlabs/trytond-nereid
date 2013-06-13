@@ -31,60 +31,66 @@ class TestCurrency(NereidTestCase):
         """
         Setup the defaults
         """
-        usd = self.currency_obj.create({
+        usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
-            'rates': [('create', {'rate': Decimal('1')})],
-        })
-        self.company = self.company_obj.create({
+            'rates': [('create', [{'rate': Decimal('1')}])],
+        }])
+        self.party, = self.party_obj.create([{
             'name': 'Openlabs',
-            'currency': usd
-        })
-        self.guest_user_id = self.nereid_user_obj.create({
+        }])
+        self.company, = self.company_obj.create([{
+            'currency': usd,
+            'party': self.party,
+        }])
+        self.guest_party, = self.party_obj.create([{
             'name': 'Guest User',
+        }])
+        self.guest_user, = self.nereid_user_obj.create([{
+            'party': self.guest_party,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': self.company,
-        })
-        c1 = self.currency_obj.create({
+            'company': self.company.id,
+        }])
+        c1, = self.currency_obj.create([{
             'code': 'C1',
             'symbol': 'C1',
             'name': 'Currency 1',
-            'rates': [('create', {'rate': Decimal('10')})],
+            'rates': [('create', [{'rate': Decimal('10')}])],
 
-        })
-        c2 = self.currency_obj.create({
+        }])
+        c2, = self.currency_obj.create([{
             'code': 'C2',
             'symbol': 'C2',
             'name': 'Currency 2',
-            'rates': [('create', {'rate': Decimal('20')})],
-        })
-        self.lang_currency = self.currency_obj.create({
+            'rates': [('create', [{'rate': Decimal('20')}])],
+        }])
+        self.lang_currency, = self.currency_obj.create([{
             'code': 'C3',
             'symbol': 'C3',
             'name': 'Currency 3',
-            'rates': [('create', {'rate': Decimal('30')})],
-        })
-        self.currency_obj.create({
+            'rates': [('create', [{'rate': Decimal('30')}])],
+        }])
+        self.currency_obj.create([{
             'code': 'C4',
             'symbol': 'C4',
             'name': 'Currency 4',
-            'rates': [('create', {'rate': Decimal('40')})],
-        })
+            'rates': [('create', [{'rate': Decimal('40')}])],
+        }])
         self.website_currencies = [c1, c2]
         url_map, = self.url_map_obj.search([], limit=1)
         self.en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.nereid_website_obj.create({
+        self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map,
             'company': self.company,
             'application_user': USER,
             'default_language': self.en_us,
-            'guest_user': self.guest_user_id,
+            'guest_user': self.guest_user.id,
             'currencies': [('set', self.website_currencies)],
-        })
+        }])
         self.templates = {
             'localhost/home.jinja': '{{ request.nereid_currency.id }}',
         }

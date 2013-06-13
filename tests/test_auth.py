@@ -46,33 +46,39 @@ class TestAuth(NereidTestCase):
         """
         Setup the defaults
         """
-        usd = self.currency_obj.create({
+        usd, = self.currency_obj.create([{
             'name': 'US Dollar',
             'code': 'USD',
             'symbol': '$',
-        })
-        self.company = self.company_obj.create({
+        }])
+        self.party, = self.party_obj.create([{
             'name': 'Openlabs',
-            'currency': usd
-        })
-        self.guest_user = self.nereid_user_obj.create({
+        }])
+        self.company, = self.company_obj.create([{
+            'party': self.party,
+            'currency': usd,
+        }])
+        self.guest_party, = self.party_obj.create([{
             'name': 'Guest User',
+        }])
+        self.guest_user, = self.nereid_user_obj.create([{
+            'party': self.guest_party,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': self.company,
-        })
+            'company': self.company.id,
+        }])
 
         url_map, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.nereid_website_obj.create({
+        self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map,
             'company': self.company,
             'application_user': USER,
             'default_language': en_us,
             'guest_user': self.guest_user,
-        })
+        }])
         self.templates = {
             'localhost/home.jinja': '{{get_flashed_messages()}}',
             'localhost/login.jinja':
@@ -156,22 +162,27 @@ class TestAuth(NereidTestCase):
         Assert that matching of password works
         """
         with Transaction().start(DB_NAME, USER, CONTEXT):
-            usd = self.currency_obj.create({
+            usd, = self.currency_obj.create([{
                 'name': 'US Dollar',
                 'code': 'USD',
                 'symbol': '$',
-            })
-            company = self.company_obj.create({
+            }])
+            party, = self.party_obj.create([{
                 'name': 'Openlabs',
-                'currency': usd
-            })
-            registered_user = self.nereid_user_obj.create({
-                'name': 'Registered User',
+            }])
+            company, = self.company_obj.create([{
+                'party': party,
+                'currency': usd,
+            }])
+            registered_user_party = self.party_obj(name='Registered User')
+            registered_user_party.save()
+            registered_user, = self.nereid_user_obj.create([{
+                'party': registered_user_party,
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
                 'company': company,
-            })
+            }])
             self.assertTrue(registered_user.match_password('password'))
 
     def test_0020_activation(self):
@@ -241,14 +252,15 @@ class TestAuth(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
+            party, = self.party_obj.create([{'name': 'Registered user'}])
             data = {
-                'name': 'Registered User',
+                'party': party,
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
                 'company': self.company,
             }
-            self.nereid_user_obj.create(data.copy())
+            self.nereid_user_obj.create([data.copy()])
 
             with app.test_client() as c:
                 # try the page without login
@@ -321,14 +333,15 @@ class TestAuth(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
+            party, = self.party_obj.create([{'name': 'Registered user'}])
             data = {
-                'name': 'Registered User',
+                'party': party,
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
                 'company': self.company,
             }
-            regd_user = self.nereid_user_obj.create(data.copy())
+            regd_user, = self.nereid_user_obj.create([data.copy()])
 
             with app.test_client() as c:
 
@@ -408,14 +421,15 @@ class TestAuth(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
+            party, = self.party_obj.create([{'name': 'Registered user'}])
             data = {
-                'name': 'Registered User',
+                'party': party,
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
                 'company': self.company,
             }
-            self.nereid_user_obj.create(data.copy())
+            self.nereid_user_obj.create([data.copy()])
 
             with app.test_client() as c:
                 response = c.get("/en_US/account")
@@ -451,14 +465,14 @@ class TestAuth(NereidTestCase):
             with app.test_request_context():
                 self.assertRaises(Forbidden, test_permission_1)
 
-            perm_admin = self.nereid_permission_obj.create({
+            perm_admin, = self.nereid_permission_obj.create([{
                 'name': 'Admin',
                 'value': 'admin',
-            })
-            perm_nereid_admin = self.nereid_permission_obj.create({
+            }])
+            perm_nereid_admin, = self.nereid_permission_obj.create([{
                 'name': 'Nereid Admin',
                 'value': 'nereid_admin',
-            })
+            }])
 
             self.nereid_user_obj.write(
                 [self.guest_user], {'permissions': [('set', [perm_admin])]}
@@ -510,14 +524,15 @@ class TestAuth(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
+            party, = self.party_obj.create([{'name': 'Registered user'}])
             data = {
-                'name': 'Registered User',
+                'party': party,
                 'display_name': 'Registered User',
                 'email': 'email@example.com',
                 'password': 'password',
                 'company': self.company,
             }
-            self.nereid_user_obj.create(data.copy())
+            self.nereid_user_obj.create([data.copy()])
 
             with app.test_client() as c:
                 response = c.get('/en_US/me')
