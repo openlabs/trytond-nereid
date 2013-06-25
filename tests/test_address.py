@@ -37,6 +37,26 @@ class TestAddress(NereidTestCase):
         self.address_obj = POOL.get('party.address')
         self.contact_mech_obj = POOL.get('party.contact_mechanism')
 
+        self.templates = {
+            'home.jinja': '{{get_flashed_messages()}}',
+            'login.jinja':
+                    '{{ login_form.errors }} {{get_flashed_messages()}}',
+            'registration.jinja':
+                    '{{ form.errors }} {{get_flashed_messages()}}',
+            'reset-password.jinja': '',
+            'change-password.jinja':
+                    '{{ change_password_form.errors }}',
+            'address-edit.jinja':
+                'Address Edit {% if address %}ID:{{ address.id }}{% endif %}'
+                '{{ form.errors }}',
+            'address.jinja': '',
+            'account.jinja': '',
+            'emails/activation-text.jinja': 'activation-email-text',
+            'emails/activation-html.jinja': 'activation-email-html',
+            'emails/reset-text.jinja': 'reset-email-text',
+            'emails/reset-html.jinja': 'reset-email-html',
+        }
+
         # Patch SMTP Lib
         self.smtplib_patcher = patch('smtplib.SMTP')
         self.PatchedSMTP = self.smtplib_patcher.start()
@@ -124,26 +144,7 @@ class TestAddress(NereidTestCase):
         """
         Return templates
         """
-        templates = {
-            'localhost/home.jinja': '{{get_flashed_messages()}}',
-            'localhost/login.jinja':
-                    '{{ login_form.errors }} {{get_flashed_messages()}}',
-            'localhost/registration.jinja':
-                    '{{ form.errors }} {{get_flashed_messages()}}',
-            'localhost/reset-password.jinja': '',
-            'localhost/change-password.jinja':
-                    '{{ change_password_form.errors }}',
-            'localhost/address-edit.jinja':
-                'Address Edit {% if address %}ID:{{ address.id }}{% endif %}'
-                '{{ form.errors }}',
-            'localhost/address.jinja': '',
-            'localhost/account.jinja': '',
-            'localhost/emails/activation-text.jinja': 'activation-email-text',
-            'localhost/emails/activation-html.jinja': 'activation-email-html',
-            'localhost/emails/reset-text.jinja': 'reset-email-text',
-            'localhost/emails/reset-html.jinja': 'reset-email-html',
-        }
-        return templates.get(name)
+        return self.templates.get(name)
 
     def test_0010_add_address(self):
         """

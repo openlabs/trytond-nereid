@@ -139,7 +139,8 @@ setup(
     package_data = {
         'trytond.modules.nereid': info.get('xml', []) \
                 + ['tryton.cfg', 'locale/*.po', 'tests/*.rst']
-                + ['i18n/*.pot', 'i18n/pt_BR/LC_MESSAGES/*'],
+                + ['i18n/*.pot', 'i18n/pt_BR/LC_MESSAGES/*']
+                + ['templates/*.*', 'templates/tests/*.*'],
     },
     zip_safe=False,
     platforms='any',

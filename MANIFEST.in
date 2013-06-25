@@ -10,3 +10,4 @@ include *.odt
 include locale/*.po
 include doc/*
 include tests/*.rst
+graft templates

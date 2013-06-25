@@ -47,6 +47,14 @@ class TestStaticFile(NereidTestCase):
         self.static_file_obj = POOL.get('nereid.static.file')
         self.static_folder_obj = POOL.get('nereid.static.folder')
 
+        self.templates = {
+            'home.jinja':
+                '''
+                {% set static_file = static_file_obj(static_file_id) %}
+                {{ static_file.url }}
+                ''',
+        }
+
     def setup_defaults(self):
         """
         Setup the defaults
@@ -84,20 +92,6 @@ class TestStaticFile(NereidTestCase):
             'default_language': en_us,
             'guest_user': self.guest_user,
         }])
-
-    def get_template_source(self, name):
-        """
-        Return templates
-        """
-        templates = {
-            'localhost/home.jinja':
-                '''
-                {% set static_file = static_file_obj(static_file_id) %}
-                {{ static_file.url }}
-                ''',
-
-        }
-        return templates.get(name)
 
     def create_static_file(self, file_buffer):
         """
