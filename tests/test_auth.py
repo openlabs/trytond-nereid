@@ -80,23 +80,23 @@ class TestAuth(NereidTestCase):
             'guest_user': self.guest_user,
         }])
         self.templates = {
-            'localhost/home.jinja': '{{get_flashed_messages()}}',
-            'localhost/login.jinja':
+            'home.jinja': '{{get_flashed_messages()}}',
+            'login.jinja':
                     '{{ login_form.errors }} {{get_flashed_messages()}}',
-            'localhost/registration.jinja':
+            'registration.jinja':
                     '{{ form.errors }} {{get_flashed_messages()}}',
-            'localhost/reset-password.jinja': '',
-            'localhost/change-password.jinja':
+            'reset-password.jinja': '',
+            'change-password.jinja':
                     '''{{ change_password_form.errors }}
                     {{get_flashed_messages()}}''',
-            'localhost/address-edit.jinja': 'Address Edit {{ form.errors }}',
-            'localhost/address.jinja': '',
-            'localhost/account.jinja': '',
-            'localhost/profile.jinja': '{{ request.nereid_user.display_name }}',
-            'localhost/emails/activation-text.jinja': 'activation-email-text',
-            'localhost/emails/activation-html.jinja': 'activation-email-html',
-            'localhost/emails/reset-text.jinja': 'reset-email-text',
-            'localhost/emails/reset-html.jinja': 'reset-email-html',
+            'address-edit.jinja': 'Address Edit {{ form.errors }}',
+            'address.jinja': '',
+            'account.jinja': '',
+            'profile.jinja': '{{ request.nereid_user.display_name }}',
+            'emails/activation-text.jinja': 'activation-email-text',
+            'emails/activation-html.jinja': 'activation-email-html',
+            'emails/reset-text.jinja': 'reset-email-text',
+            'emails/reset-html.jinja': 'reset-email-html',
         }
 
     def get_template_source(self, name):
@@ -506,7 +506,7 @@ class TestAuth(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
 
-            self.templates['localhost/home.jinja'] = """
+            self.templates['home.jinja'] = """
             {{ request.nereid_user.get_profile_picture() }}
             """
 

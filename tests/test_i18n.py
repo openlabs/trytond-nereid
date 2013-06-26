@@ -69,7 +69,7 @@ class TestI18N(NereidTestCase):
         Return templates
         """
         templates = {
-            'localhost/home.jinja': '{{get_flashed_messages()}}',
+            'home.jinja': '{{get_flashed_messages()}}',
         }
         return templates.get(name)
 
