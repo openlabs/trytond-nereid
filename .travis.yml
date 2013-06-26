@@ -3,6 +3,6 @@ python:
   - "2.6"
   - "2.7"
 install:
-  - python setup.py install
   - pip install git+git://github.com/openlabs/nereid.git@develop
+  - python setup.py install
 script: python setup.py test
