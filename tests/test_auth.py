@@ -85,7 +85,7 @@ class TestAuth(NereidTestCase):
                     '{{ login_form.errors }} {{get_flashed_messages()}}',
             'registration.jinja':
                     '{{ form.errors }} {{get_flashed_messages()}}',
-            'reset-password.jinja': '',
+            'reset-password.jinja': '{{get_flashed_messages()}}',
             'change-password.jinja':
                     '''{{ change_password_form.errors }}
                     {{get_flashed_messages()}}''',
@@ -412,6 +412,38 @@ class TestAuth(NereidTestCase):
                     }
                 )
                 self.assertEqual(response.status_code, 302)     # Login approved
+
+            with app.test_client() as c:
+                # Try to reset again - with bad intentions
+
+                # Bad request because there is no email
+                response = c.post('/en_US/reset-account', data={})
+                self.assertEqual(response.status_code, 400)
+
+                # Bad request because there is empty email
+                response = c.post('/en_US/reset-account', data={'email': ''})
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(
+                    'Invalid email address' in response.data
+                )
+
+            data = {
+                'party': party,
+                'display_name': 'User without email',
+                'email': '',
+                'password': 'password',
+                'company': self.company,
+            }
+            email_less_user, = self.nereid_user_obj.create([data.copy()])
+            with app.test_client() as c:
+                # Bad request because there is empty email
+                # this is a special case where there is an user
+                # with empty email
+                response = c.post('/en_US/reset-account', data={'email': ''})
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(
+                    'Invalid email address' in response.data
+                )
 
     def test_0050_logout(self):
         """
