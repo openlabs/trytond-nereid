@@ -518,7 +518,7 @@ class NereidUser(ModelSQL, ModelView):
                 ('company', '=', request.nereid_website.company.id),
                 ])
 
-            if not user_ids:
+            if not user_ids or not request.form['email']:
                 flash(_('Invalid email address'))
                 return render_template('reset-password.jinja')
 
