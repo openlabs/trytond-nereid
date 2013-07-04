@@ -1,156 +1,159 @@
-# Translations template for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
-#
-#, fuzzy
+# Spanish (Spain) translations for Nereid.
+# Copyright (C) 2012 ORGANIZATION
+# This file is distributed under the same license as the Nereid project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2012.
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
+"Project-Id-Version: Nereid 2.8\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2013-07-03 15:11+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2013-07-02 13:44+0200\n"
+"Last-Translator: Raimon Esteve <resteve@zikzakmedia.com>\n"
+"Language-Team: ca_ES <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=iso-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
 
 #: party.py:46 party.py:71
 msgid "Name"
-msgstr ""
+msgstr "Nom"
 
 #: party.py:47 routing.py:89
 msgid "e-mail"
-msgstr ""
+msgstr "Correu electrònic"
 
 #: party.py:48 party.py:92
 msgid "New Password"
-msgstr ""
+msgstr "Nova contrasenya"
 
 #: party.py:50 party.py:94
 msgid "Passwords must match"
-msgstr ""
+msgstr "Les contrasenyes han de coincidir"
 
 #: party.py:51
 msgid "Confirm Password"
-msgstr ""
+msgstr "Confirma contrasenya"
 
 #: party.py:72
 msgid "Street"
-msgstr ""
+msgstr "Carrer"
 
 #: party.py:73
 msgid "Street (Bis)"
-msgstr ""
+msgstr "Carrer (BIS)"
 
 #: party.py:74
 msgid "Post Code"
-msgstr ""
+msgstr "Codi postal"
 
 #: party.py:75
 msgid "City"
-msgstr ""
+msgstr "Ciutat"
 
 #: party.py:76
 msgid "Country"
-msgstr ""
+msgstr "Pais"
 
 #: party.py:77
 msgid "State/County"
-msgstr ""
+msgstr "Provincia"
 
 #: party.py:78
 msgid "Email"
-msgstr ""
+msgstr "Correu electrònic"
 
 #: party.py:79
 msgid "Phone"
-msgstr ""
+msgstr "Telèfon"
 
 #: party.py:95
 msgid "Repeat Password"
-msgstr ""
+msgstr "Repeteix la contrasenya"
 
 #: party.py:108
 msgid "Old Password"
-msgstr ""
+msgstr "Contrasenya actual"
 
 #: party.py:350
 msgid ""
 "A registration already exists with this email. Please contact customer "
 "care"
 msgstr ""
+"Un altre usuari concideix amb aquest correu electrònic. Identifiquis amb "
+"aquest correu o possis en contacte amb el nostre servei d'atenció al "
+"client."
 
 #: party.py:368
 msgid "Registration Complete. Check your email for activation"
 msgstr ""
+"S'ha creat el seu compte. Revisi la seva bústia de correu per "
+"finalitzar l'activació."
 
 #: party.py:383
 msgid "Account Activation"
-msgstr ""
+msgstr "Activa el seu compte"
 
 #: party.py:413 party.py:454
 msgid "Your password has been successfully changed! Please login again"
-msgstr ""
+msgstr "S'ha modificat la seva contrasenya. Identifiquis de nou"
 
 #: party.py:419
 msgid "The current password you entered is invalid"
-msgstr ""
+msgstr "La contrasenya nova es incorrecta"
 
 #: party.py:471
 msgid "Invalid Activation Code"
-msgstr ""
+msgstr "Codi d'activació invàlid"
 
 #: party.py:482
 msgid "Your account has been activated"
-msgstr ""
+msgstr "S'ha activat el seu compte"
 
 #: party.py:522
 msgid "Invalid email address"
-msgstr ""
+msgstr "El correu electrònic no es correcta"
 
 #: party.py:529
 msgid "An email has been sent to your account for resetting your credentials"
-msgstr ""
+msgstr "Un correu electrònic s'ha enviat per reiniciar el seu compte"
 
 #: party.py:542
 msgid "Account Password Reset"
-msgstr ""
+msgstr "Reinici contrasenya"
 
 #: party.py:599
 msgid "Your account has not been activated yet!"
-msgstr ""
+msgstr "El seu compte encara no es troba activat."
 
 #: routing.py:90
 msgid "Password"
-msgstr ""
+msgstr "Contrasenya"
 
 #: routing.py:247
 #, python-format
 msgid "You are now logged in. Welcome %(name)s"
-msgstr ""
+msgstr "Benvingut %(name)s. Ara està conectat."
 
 #: routing.py:260
 msgid "Invalid login credentials"
-msgstr ""
+msgstr "Les dades d'indentificació no son correctes"
 
 #: routing.py:275
 msgid "You have been logged out successfully. Thanks for visiting us"
-msgstr ""
+msgstr "S'ha tancat la sessió amb èxit"
 
 #: tests/test_i18n.py:81
 msgid "en_US"
-msgstr ""
+msgstr "en_US"
 
 #: tests/test_i18n.py:91
 #, python-format
 msgid "Hi %(name)s"
-msgstr ""
+msgstr "Hola %(name)s"
 
 #: tests/test_i18n.py:102 tests/test_i18n.py:105
 #, python-format
 msgid "%(num)d apple"
-msgstr ""
-
+msgstr "%(num)d de pomes"
