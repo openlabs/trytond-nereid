@@ -747,7 +747,8 @@ class ContactMechanism(ModelSQL, ModelView):
     """
     __name__ = "party.contact_mechanism"
 
-    def get_form(self):
+    @classmethod
+    def get_form(cls):
         """
         Returns the contact mechanism form
         """
