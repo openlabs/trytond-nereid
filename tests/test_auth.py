@@ -594,6 +594,67 @@ class TestAuth(NereidTestCase):
                 response = c.get('/en_US/me')
                 self.assertEqual(response.data, 'Regd User')
 
+    def test_0100_has_permission(self):
+        '''
+        Test the functionality of has_permissions
+        '''
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            p1, p2, p3, p4 = self.nereid_permission_obj.create([
+                {'name': 'p1', 'value': 'nereid.perm1'},
+                {'name': 'p2', 'value': 'nereid.perm2'},
+                {'name': 'p3', 'value': 'nereid.perm3'},
+                {'name': 'p4', 'value': 'nereid.perm4'},
+            ])
+            self.nereid_user_obj.write(
+                [self.guest_user],
+                {
+                    'permissions': [
+                        ('add', [p1, p2])
+                    ]
+                }
+            )
+
+            # all = [], any = [] = True
+            self.assertTrue(self.guest_user.has_permissions())
+
+            # all = [p1, p2], any = [] == True
+            self.assertTrue(self.guest_user.has_permissions(
+                perm_all = [p1.value, p2.value]
+            ))
+
+            # all = [p1, p2], any = [p3, p4] == False
+            self.assertFalse(self.guest_user.has_permissions(
+                perm_all = [p1.value, p2.value],
+                perm_any = [p3.value, p4.value]
+            ))
+
+            # all = [p1, p3], any = [] == False
+            self.assertFalse(self.guest_user.has_permissions(
+                perm_all = [p1.value, p3.value],
+            ))
+
+            # all = [p1, p3], any = [p1, p3, p4] == False
+            self.assertFalse(self.guest_user.has_permissions(
+                perm_all = [p1.value, p3.value],
+                perm_any = [p1.value, p3.value, p4.value]
+            ))
+
+            # all = [p1, p2], any = [p1, p3, p4] == True
+            self.assertTrue(self.guest_user.has_permissions(
+                perm_all = [p1.value, p2.value],
+                perm_any = [p1.value, p3.value, p4.value]
+            ))
+
+            # all = [], any = [p1, p2, p3] == True
+            self.assertTrue(self.guest_user.has_permissions(
+                perm_any = [p1.value, p2.value, p3.value]
+            ))
+
+            # all = [], any = [p3, p4] == False
+            self.assertFalse(self.guest_user.has_permissions(
+                perm_any = [p3.value, p4.value]
+            ))
 
 
 def suite():
