@@ -265,19 +265,29 @@ class NereidUser(ModelSQL, ModelView):
         # everytime.
         return frozenset([p.value for p in self.permissions])
 
-    def has_permissions(self, permissions):
-        """Check if the user has required permissions for access
+    def has_permissions(self, perm_all=None, perm_any=None):
+        """Check if the user has all required permissions in perm_all and
+        has any permission from perm_any for access
 
-        :param permissions: A set/frozenset of permission values/keywords
+        :param perm_all: A set/frozenset of all permission values/keywords.
+        :param perm_any: A set/frozenset of any permission values/keywords.
 
         :return: True/False
         """
-        if not isinstance(permissions, (set, frozenset)):
-            permissions = frozenset(permissions)
-        current_user_permissions = self.get_permissions()
-        if permissions.issubset(current_user_permissions):
+        if not perm_all and not perm_any:
+            # Access allowed if no permission is required
             return True
-        return False
+        if not isinstance(perm_all, (set, frozenset)):
+            perm_all = frozenset(perm_all if perm_all else [])
+        if not isinstance(perm_any, (set, frozenset)):
+            perm_any = frozenset(perm_any if perm_any else [])
+        current_user_permissions = self.get_permissions()
+
+        if perm_all and not perm_all.issubset(current_user_permissions):
+            return False
+        if perm_any and not perm_any.intersection(current_user_permissions):
+            return False
+        return True
 
     @staticmethod
     def default_timezone():
