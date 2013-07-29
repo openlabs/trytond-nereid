@@ -1,68 +1,7 @@
-trytond-nereid
-==============
+Warning: This code has been merged with nereid
+==============================================
 
-This is the base module required for `Nereid <http://nereid.openlabs.co.in>`_
-to work. The module creates the models and the `tryton <http://trytond.org>`_
-views for the basic module to work.
-
-.. image:: https://travis-ci.org/openlabs/trytond-nereid.png?branch=feature/2.6
-
-Copyright
----------
-
-Read COPYRIGHT
-
-License
--------
-
-GPL3 - Read LICENSE
-
-Installation
-------------
-
-Read INSTALL
-
-
-Using Babel to translate trytond-nereid
----------------------------------------
-
-The basic steps in translation are:
-
-  * Extract translations
-  * Create language/locales
-  * Translate them
-  * compile the translations
-
-To extract translations
-```````````````````````
-
-    pybabel extract -F babel.cfg -o i18n/messages.pot .
-
-
-To Translate to new language
-`````````````````````````````
-
-    pybabel init -i i18n/messages.pot -d i18n -l pt_BR
-
-
-Now edit the translations/de/LC_MESSAGES/messages.po file as needed. 
-Check out some gettext tutorials if you feel lost.
-
-
-To compile the translations for use
-```````````````````````````````````
-
-
-    pybabel compile -d i18n
-
-
-What if the strings change?
-```````````````````````````
-
-
-    pybabel update -i i18n/messages.pot -d i18n
-
-
-Afterwards some strings might be marked as fuzzy (where it tried to figure out if a 
-translation matched a changed key). If you have fuzzy entries, make sure to check 
-them by hand and remove the fuzzy flag before compiling. 
+This code is now a part of `Nereid <http://nereid.openlabs.co.in>`_
+repository and the code here is only maintained for legacy reasons. Please
+do not send pull requests to this repository but to
+`Nereid <http://nereid.openlabs.co.in>`_.
